@@ -69,7 +69,7 @@ function generatePhase1() {
   const counts = {};
   players.forEach(p => counts[p]=0);
 
-  if (cfg.matchesPerPlayer === 4 && players.length >= 5) {
+  if (cfg.matchesPerPlayer === 4 && players.length >= 6) {
     // Exact construction for four matches per player.
     // Every player gets four different teammates, with no repeated pair.
     // This avoids the random greedy search getting stuck on odd-sized groups
