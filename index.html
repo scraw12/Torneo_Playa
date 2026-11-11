@@ -76,6 +76,15 @@
         <button class="save" onclick="adminNewTournament()">🧹 Nuevo torneo</button>
       </div>
     </div>
+    <div class="card" style="margin-bottom:14px">
+      <h3>Incorporar jugador a Fase 1</h3>
+      <div class="muted" style="margin-bottom:10px">Añade un participante después de generar los partidos. Se redistribuirán los partidos necesarios para mantener el mismo número de encuentros por jugador. Solo se permite antes de introducir resultados.</div>
+      <div id="phase1PlayerCounts" class="muted" style="margin-bottom:10px">Todavía no hay partidos generados.</div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">
+        <input id="newPhase1Player" type="text" placeholder="Nombre del nuevo jugador" style="flex:1;min-width:210px;padding:9px;border:1px solid #cbd2da;border-radius:7px">
+        <button class="save" id="addPhase1PlayerButton" onclick="addPhase1Player()">➕ Añadir y equilibrar Fase 1</button>
+      </div>
+    </div>
     <div class="card">
       <h3>Estado</h3>
       <div id="adminStatus" class="muted">Comprobando cuenta...</div>
@@ -171,7 +180,7 @@
 
     renderFase1(); renderClasif(); renderPairs(); renderKO();
     if (window.IS_ADMIN) renderAdminPhase1Counts();
-    if (window.IS_ADMIN) renderAdminKnockout();
+
   }
 
   function renderAdminPhase1Counts() {
