@@ -12,9 +12,9 @@ function adminGetKnockoutManagementData() {
 }
 
 function getTeamPlayerNames_(team) {
-  return String(team || '').split(/\\s*\\/\\s*/)
+  return String(team || '').split(/\s*\/\s*/)
     .map(value => String(value || '').trim())
-    .filter(value => value && !/^PENDIENTE$/i.test(value) && !/^Ganador\\s+/i.test(value));
+    .filter(value => value && !/^PENDIENTE$/i.test(value) && !/^Ganador\s+/i.test(value)
 }
 
 function getKnockoutPlayerCounts_() {
