@@ -69,45 +69,73 @@ function generatePhase1() {
   const counts = {};
   players.forEach(p => counts[p]=0);
 
-  // Reintentos completos para evitar bloqueos en combinaciones difíciles.
-  for (let attempt=0; attempt<1000; attempt++) {
-    usedPairs.clear();
-    schedule.length = 0;
-    players.forEach(p => counts[p]=0);
-    let ok = true;
+  if (cfg.matchesPerPlayer === 4 && players.length >= 5) {
+    // Exact construction for four matches per player.
+    // Every player gets four different teammates, with no repeated pair.
+    // This avoids the random greedy search getting stuck on odd-sized groups
+    // such as 29 players, even though a valid schedule exists.
+    const orderedPlayers = shuffle(players);
+    const n = orderedPlayers.length;
 
-    for (let m=0; m<totalMatches; m++) {
-      const eligible = shuffle(players.filter(p => counts[p] < cfg.matchesPerPlayer));
-      if (eligible.length < 4) { ok=false; break; }
-
-      // Priorizamos players con más necesidad de matches.
-      eligible.sort((a,b) => counts[a]-counts[b] || Math.random()-0.5);
-
-      let found = null;
-      const tries = Math.min(500, Math.max(100, players.length*20));
-      for (let t=0;t<tries && !found;t++) {
-        const pool = shuffle(eligible.slice(0, Math.min(8, eligible.length)));
-        if (pool.length < 4) continue;
-        const s = pool.slice(0,4);
-        const forms = shuffle([
-          [[s[0],s[1]],[s[2],s[3]]],
-          [[s[0],s[2]],[s[1],s[3]]],
-          [[s[0],s[3]],[s[1],s[2]]]
-        ]);
-        for (const f of forms) {
-          const k1=pairKey(f[0][0],f[0][1]), k2=pairKey(f[1][0],f[1][1]);
-          if (!usedPairs.has(k1) && !usedPairs.has(k2)) { found=f; break; }
-        }
-      }
-      if (!found) { ok=false; break; }
-      found.flat().forEach(p=>counts[p]++);
-      usedPairs.add(pairKey(found[0][0],found[0][1]));
-      usedPairs.add(pairKey(found[1][0],found[1][1]));
-      schedule.push(found);
+    for (let i = 0; i < n; i++) {
+      schedule.push([
+        [orderedPlayers[i], orderedPlayers[(i + 1) % n]],
+        [orderedPlayers[(i + 2) % n], orderedPlayers[(i + 4) % n]]
+      ]);
     }
 
-    if (ok && Object.values(counts).every(v=>v===cfg.matchesPerPlayer)) break;
-    if (attempt===999) throw new Error('No he encontrado una combinación válida. Prueba con otro número de matches por player o de participantes.');
+    schedule.forEach(match => {
+      match.flat().forEach(player => counts[player]++);
+      usedPairs.add(pairKey(match[0][0], match[0][1]));
+      usedPairs.add(pairKey(match[1][0], match[1][1]));
+    });
+  } else {
+    // Randomized construction retained for all other configurations.
+    for (let attempt = 0; attempt < 1000; attempt++) {
+      usedPairs.clear();
+      schedule.length = 0;
+      players.forEach(p => counts[p] = 0);
+      let ok = true;
+
+      for (let m = 0; m < totalMatches; m++) {
+        const eligible = shuffle(players.filter(p => counts[p] < cfg.matchesPerPlayer));
+        if (eligible.length < 4) { ok = false; break; }
+
+        eligible.sort((a, b) => counts[a] - counts[b] || Math.random() - 0.5);
+
+        let found = null;
+        const tries = Math.min(500, Math.max(100, players.length * 20));
+        for (let t = 0; t < tries && !found; t++) {
+          const pool = shuffle(eligible.slice(0, Math.min(8, eligible.length)));
+          if (pool.length < 4) continue;
+          const selected = pool.slice(0, 4);
+          const forms = shuffle([
+            [[selected[0], selected[1]], [selected[2], selected[3]]],
+            [[selected[0], selected[2]], [selected[1], selected[3]]],
+            [[selected[0], selected[3]], [selected[1], selected[2]]]
+          ]);
+          for (const form of forms) {
+            const key1 = pairKey(form[0][0], form[0][1]);
+            const key2 = pairKey(form[1][0], form[1][1]);
+            if (!usedPairs.has(key1) && !usedPairs.has(key2)) {
+              found = form;
+              break;
+            }
+          }
+        }
+
+        if (!found) { ok = false; break; }
+        found.flat().forEach(player => counts[player]++);
+        usedPairs.add(pairKey(found[0][0], found[0][1]));
+        usedPairs.add(pairKey(found[1][0], found[1][1]));
+        schedule.push(found);
+      }
+
+      if (ok && Object.values(counts).every(value => value === cfg.matchesPerPlayer)) break;
+      if (attempt === 999) {
+        throw new Error('No he encontrado una combinación válida. Prueba con otro número de matches por player o de participantes.');
+      }
+    }
   }
 
   // Ordenamos aleatoriamente los matches y dejamos la court vacía para asignación manual.
