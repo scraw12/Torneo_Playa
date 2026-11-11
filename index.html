@@ -80,37 +80,7 @@
       <h3>Estado</h3>
       <div id="adminStatus" class="muted">Comprobando cuenta...</div>
     </div>
-    <div class="card" style="margin-top:14px">
-      <h3>Gestión manual de eliminatorias</h3>
-      <p class="muted">Añade jugadores y partidos, o modifica y elimina partidos sin regenerar el cuadro. Los resultados de partidos no editados se conservan. Si cambias las parejas, se borra el resultado de ese partido y se dejan pendientes los partidos posteriores que dependan de su ganador.</p>
-      <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:end;margin:12px 0">
-        <label style="flex:1;min-width:220px">Nuevo jugador<input id="newKnockoutPlayer" type="text" placeholder="Nombre del jugador" style="display:block;width:100%;padding:9px;margin-top:4px"></label>
-        <button class="save" onclick="addKnockoutPlayer()">Añadir jugador</button>
-      </div>
-      <div class="scroll"><table><thead><tr><th>Jugador</th><th>Partidos eliminatorias</th></tr></thead><tbody id="adminPlayerCounts"></tbody></table></div>
-      <h3 style="margin-top:20px">Añadir partido</h3>
-      <div class="grid">
-        <label>Competición<select id="newKoCompetition" style="display:block;width:100%;padding:9px;margin-top:4px"><option>ORO</option><option>PLATA</option></select></label>
-        <label>Ronda<input id="newKoRound" type="text" placeholder="Cuartos / Semifinal / Final" style="display:block;width:100%;padding:9px;margin-top:4px"></label>
-        <label>Pareja 1<input id="newKoPair1" type="text" placeholder="Jugador 1 / Jugador 2" style="display:block;width:100%;padding:9px;margin-top:4px"></label>
-        <label>Pareja 2<input id="newKoPair2" type="text" placeholder="Jugador 3 / Jugador 4" style="display:block;width:100%;padding:9px;margin-top:4px"></label>
-      </div>
-      <button class="save" style="margin-top:10px" onclick="addKnockoutMatch()">Crear partido</button>
-      <h3 style="margin-top:22px">Editar / eliminar partidos</h3>
-      <div class="scroll"><table style="min-width:1050px"><thead><tr><th>ID</th><th>Competición</th><th>Ronda</th><th>Pareja 1</th><th>Pareja 2</th><th>Acciones</th></tr></thead><tbody id="adminKnockoutMatches"></tbody></table></div>
-    </div>
-    <div class="card" style="margin-top:14px">
-      <h3>Incorporar jugador a Fase 1</h3>
-      <p class="muted">Solo disponible antes de introducir el primer resultado. El sistema redistribuirá el mínimo de partidos posible y conservará el resto del calendario.</p>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:end">
-        <label style="flex:1;min-width:220px">Nombre del nuevo jugador
-          <input id="newPhase1Player" type="text" placeholder="Nombre del jugador" style="display:block;width:100%;padding:9px;border:1px solid var(--border);border-radius:7px;margin-top:4px">
-        </label>
-        <button class="save" id="addPhase1PlayerButton" onclick="addPhase1Player()">Añadir y equilibrar Fase 1</button>
-      </div>
-      <div id="phase1PlayerCounts" class="muted" style="margin-top:12px"></div>
-    </div>
-  </section>
+      </section>
 
   <section id="resumen" class="view">
     <h2>Resumen</h2>
@@ -378,20 +348,6 @@
       }).join('')+'</div>';
     }).join('');
   }
-
-  function renderAdminKnockout() {
-    const players=DATA.players||[];
-    document.getElementById('adminPlayerCounts').innerHTML=players.length?players.map(p=>`<tr><td>${esc(p.name)}</td><td>${Number(p.matches)||0}</td></tr>`).join(''):'<tr><td colspan="2" class="empty">No hay jugadores activos.</td></tr>';
-    const body=document.getElementById('adminKnockoutMatches');
-    body.innerHTML=DATA.knockout.length?DATA.knockout.map(m=>`<tr data-match-id="${esc(m.id)}">
-      <td>${esc(m.id)}</td><td><select class="ko-edit-competition" style="min-width:90px;padding:7px"><option value="ORO" ${m.competition==='ORO'?'selected':''}>ORO</option><option value="PLATA" ${m.competition==='PLATA'?'selected':''}>PLATA</option></select></td>
-      <td><input class="ko-edit-round" value="${esc(m.round)}" style="min-width:120px;padding:7px"></td><td><input class="ko-edit-pair1" value="${esc(m.pair1)}" style="min-width:180px;padding:7px"></td>
-      <td><input class="ko-edit-pair2" value="${esc(m.pair2)}" style="min-width:180px;padding:7px"></td><td style="white-space:nowrap"><button class="save" onclick="saveKnockoutMatch(this)">Guardar</button> <button class="save" style="background:#a32626" onclick="deleteKnockoutMatch(this)">Eliminar</button></td></tr>`).join(''):'<tr><td colspan="6" class="empty">Todavía no hay partidos de eliminatorias.</td></tr>';
-  }
-  async function addKnockoutPlayer(){const input=document.getElementById('newKnockoutPlayer'),name=input.value.trim();if(!name){showMessage('Escribe el nombre del jugador.',true);return;}try{DATA=await callServer('adminAddKnockoutPlayer',name);input.value='';render();activate('admin');showMessage('Jugador añadido a la lista.');}catch(e){showMessage(e.message||String(e),true);}}
-  async function addKnockoutMatch(){const match={competition:document.getElementById('newKoCompetition').value,round:document.getElementById('newKoRound').value.trim(),pair1:document.getElementById('newKoPair1').value.trim(),pair2:document.getElementById('newKoPair2').value.trim()};try{DATA=await callServer('adminSaveKnockoutMatch',match);['newKoRound','newKoPair1','newKoPair2'].forEach(id=>document.getElementById(id).value='');render();activate('admin');showMessage('Partido añadido.');}catch(e){showMessage(e.message||String(e),true);}}
-  async function saveKnockoutMatch(button){const row=button.closest('tr'),match={id:row.dataset.matchId,competition:row.querySelector('.ko-edit-competition').value,round:row.querySelector('.ko-edit-round').value.trim(),pair1:row.querySelector('.ko-edit-pair1').value.trim(),pair2:row.querySelector('.ko-edit-pair2').value.trim()};button.disabled=true;try{DATA=await callServer('adminSaveKnockoutMatch',match);render();activate('admin');showMessage('Partido actualizado.');}catch(e){showMessage(e.message||String(e),true);button.disabled=false;}}
-  async function deleteKnockoutMatch(button){const row=button.closest('tr'),id=row.dataset.matchId;if(!confirm('¿Eliminar el partido '+id+'? Los partidos posteriores que dependan de su ganador quedarán pendientes.'))return;button.disabled=true;try{DATA=await callServer('adminDeleteKnockoutMatch',id);render();activate('admin');showMessage('Partido eliminado.');}catch(e){showMessage(e.message||String(e),true);button.disabled=false;}}
 
   function winnerFromScore(m){
     if(m.score1==='' || m.score2==='' || m.score1==null || m.score2==null) return '';
