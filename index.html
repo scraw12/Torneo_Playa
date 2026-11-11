@@ -80,6 +80,7 @@
       <h3>Incorporar jugador a Fase 1</h3>
       <div class="muted" style="margin-bottom:10px">Añade un participante después de generar los partidos. Se redistribuirán los partidos necesarios para mantener el mismo número de encuentros por jugador. Solo se permite antes de introducir resultados.</div>
       <div id="phase1PlayerCounts" class="muted" style="margin-bottom:10px">Todavía no hay partidos generados.</div>
+      <div id="phase1AffectedMatches" style="display:none;margin:12px 0;padding:12px;background:#f0f7ff;border:1px solid #cfe2ff;border-radius:9px"></div>
       <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">
         <input id="newPhase1Player" type="text" placeholder="Nombre del nuevo jugador" style="flex:1;min-width:210px;padding:9px;border:1px solid #cbd2da;border-radius:7px">
         <button class="save" id="addPhase1PlayerButton" onclick="addPhase1Player()">➕ Añadir y equilibrar Fase 1</button>
@@ -211,6 +212,7 @@
       DATA = result.data;
       input.value = '';
       render();
+      renderPhase1AffectedMatches(result);
       activate('admin');
       showMessage('Jugador añadido. Partidos modificados: ' + result.modifiedMatches.length +
         '. Partidos nuevos: ' + result.addedMatches.length + '.');
@@ -219,6 +221,46 @@
     } finally {
       button.disabled = false;
     }
+  }
+
+  function renderPhase1AffectedMatches(result) {
+    const container = document.getElementById('phase1AffectedMatches');
+    if (!container) return;
+    const matches = result.affectedMatches || [];
+    if (!matches.length) {
+      container.style.display = 'none';
+      container.innerHTML = '';
+      return;
+    }
+
+    const team = players => (players || []).map(esc).join(' + ');
+    container.innerHTML = `
+      <strong>Partidos afectados al incorporar a ${esc(result.newPlayer)}</strong>
+      <div class="muted" style="margin:5px 0 10px">
+        ${result.modifiedMatches.length} partidos modificados y ${result.addedMatches.length} partidos nuevos.
+      </div>
+      <div class="scroll">
+        <table style="min-width:620px">
+          <thead><tr><th>Partido</th><th>Tipo</th><th>Antes</th><th>Después</th></tr></thead>
+          <tbody>${matches.map(match => {
+            if (match.type === 'added') {
+              return `<tr>
+                <td><strong>${esc(match.id)}</strong></td>
+                <td><span class="badge">Nuevo</span></td>
+                <td class="muted">—</td>
+                <td>${team(match.afterTeam1)} <strong>VS</strong> ${team(match.afterTeam2)}</td>
+              </tr>`;
+            }
+            return `<tr>
+              <td><strong>${esc(match.id)}</strong></td>
+              <td><span class="badge">Modificado</span></td>
+              <td>${team(match.beforeTeam1)} <strong>VS</strong> ${team(match.beforeTeam2)}</td>
+              <td>${team(match.afterTeam1)} <strong>VS</strong> ${team(match.afterTeam2)}</td>
+            </tr>`;
+          }).join('')}</tbody>
+        </table>
+      </div>`;
+    container.style.display = 'block';
   }
 
   function scoreEditor(type, id, s1, s2) {
