@@ -56,25 +56,36 @@ function adminAddPhase1Player(playerName) {
     throw new Error('Con esta cantidad de jugadores y partidos no es posible mantener el mismo número de partidos para todos.');
   }
 
+  // Count appearances using normalized names to avoid false mismatches
+  // caused by capitalization or leading/trailing spaces in the sheet.
   const counts = {};
-  activePlayers.forEach(player => counts[player] = 0);
+  const displayNames = {};
+  activePlayers.forEach(player => {
+    const key = String(player).trim().toLowerCase();
+    counts[key] = 0;
+    displayNames[key] = player;
+  });
   const usedPairs = new Set();
-  phaseRows.forEach(row => {
+  phaseRows.forEach((row, rowIndex) => {
     const teams = [
       [String(row[3] || '').trim(), String(row[4] || '').trim()],
       [String(row[6] || '').trim(), String(row[7] || '').trim()]
     ];
     teams.forEach(team => {
       if (!team[0] || !team[1]) {
-        throw new Error('Hay un partido incompleto en FASE1. Corrígelo antes de incorporar al jugador.');
+        throw new Error('Hay un partido incompleto en FASE1 (fila ' + (rowIndex + 2) + '). Corrígelo antes de incorporar al jugador.');
       }
-      if (!Object.prototype.hasOwnProperty.call(counts, team[0]) ||
-          !Object.prototype.hasOwnProperty.call(counts, team[1])) {
-        throw new Error('Hay jugadores en FASE1 que no están activos en JUGADORES. Revisa la lista antes de continuar.');
+      const key1 = team[0].toLowerCase();
+      const key2 = team[1].toLowerCase();
+      if (!Object.prototype.hasOwnProperty.call(counts, key1) ||
+          !Object.prototype.hasOwnProperty.call(counts, key2)) {
+        throw new Error('Hay jugadores en FASE1 que no están activos en JUGADORES (fila ' + (rowIndex + 2) + '): ' +
+          team.filter(player => !Object.prototype.hasOwnProperty.call(counts, player.toLowerCase())).join(', ') +
+          '. Revisa la lista antes de continuar.');
       }
-      counts[team[0]]++;
-      counts[team[1]]++;
-      const key = pairKey(team[0], team[1]);
+      counts[key1]++;
+      counts[key2]++;
+      const key = pairKey(key1, key2);
       if (usedPairs.has(key)) {
         throw new Error('La Fase 1 actual ya contiene compañeros repetidos. No se puede redistribuir de forma segura.');
       }
@@ -82,9 +93,18 @@ function adminAddPhase1Player(playerName) {
     });
   });
 
-  const invalidCounts = activePlayers.filter(player => counts[player] !== matchesPerPlayer);
+  const invalidCounts = activePlayers
+    .filter(player => counts[String(player).trim().toLowerCase()] !== matchesPerPlayer)
+    .map(player => {
+      const count = counts[String(player).trim().toLowerCase()];
+      return player + ': ' + count + ' partidos';
+    });
   if (invalidCounts.length) {
-    throw new Error('La Fase 1 actual no tiene el mismo número de partidos para todos. No se puede incorporar al jugador automáticamente.');
+    throw new Error(
+      'Reparto desigual en Fase 1. Configuración: ' + matchesPerPlayer +
+      ' partidos por jugador. Descuadres: ' + invalidCounts.join('; ') +
+      '. No se ha modificado ningún partido.'
+    );
   }
 
   const plan = findPhase1InsertionPlan_(phaseRows, matchesPerPlayer, usedPairs);
