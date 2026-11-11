@@ -187,11 +187,32 @@ function adminAddPhase1Player(playerName) {
     throw error;
   }
 
+  const affectedMatches = plan.replacements.map(item => {
+    const before = phaseRows[item.rowIndex];
+    const after = updatedRows[item.rowIndex];
+    return {
+      type: 'modified',
+      id: String(after[0]),
+      round: after[2],
+      beforeTeam1: [String(before[3]), String(before[4])],
+      beforeTeam2: [String(before[6]), String(before[7])],
+      afterTeam1: [String(after[3]), String(after[4])],
+      afterTeam2: [String(after[6]), String(after[7])]
+    };
+  }).concat(newRows.map(row => ({
+    type: 'added',
+    id: String(row[0]),
+    round: row[2],
+    afterTeam1: [String(row[3]), String(row[4])],
+    afterTeam2: [String(row[6]), String(row[7])]
+  })));
+
   return {
     ok: true,
     newPlayer: name,
     modifiedMatches: plan.replacements.map(item => String(phaseRows[item.rowIndex][0])),
     addedMatches: newRows.map(row => String(row[0])),
+    affectedMatches: affectedMatches,
     data: getPublicTournamentData()
   };
 }
