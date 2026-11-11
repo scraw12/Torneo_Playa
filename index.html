@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    :root { --bg:#f5f6f8; --card:#fff; --text:#17202a; --muted:#667085; --accent:#1f6feb; --gold:#fff1a8; --silver:#e9edf2; --border:#e2e6ea; }
+    * { box-sizing:border-box; }
+    body { margin:0; font-family:Arial,Helvetica,sans-serif; background:var(--bg); color:var(--text); }
+    header { background:#111827; color:#fff; padding:18px 20px; position:sticky; top:0; z-index:10; }
+    header .title { font-size:24px; font-weight:700; }
+    header .meta { margin-top:5px; color:#d1d5db; font-size:14px; }
+    nav { display:flex; gap:7px; overflow-x:auto; padding:10px 12px; background:#fff; border-bottom:1px solid var(--border); position:sticky; top:72px; z-index:9; }
+    nav button { border:0; background:#eef1f5; padding:9px 13px; border-radius:9px; cursor:pointer; white-space:nowrap; }
+    nav button.active { background:var(--accent); color:#fff; }
+    main { max-width:1200px; margin:0 auto; padding:18px 12px 50px; }
+    .view { display:none; }
+    .view.active { display:block; }
+    .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:12px; }
+    .card { background:var(--card); border:1px solid var(--border); border-radius:14px; padding:15px; box-shadow:0 1px 2px rgba(0,0,0,.04); }
+    .stat { font-size:28px; font-weight:700; margin-top:5px; }
+    .muted { color:var(--muted); font-size:13px; }
+    h2 { margin:5px 0 14px; }
+    h3 { margin:0 0 10px; }
+    .scroll { width:100%; max-width:100%; overflow-x:auto; }
+    table { width:100%; border-collapse:collapse; background:#fff; border-radius:12px; }
+    th,td { padding:9px 8px; border-bottom:1px solid var(--border); text-align:left; vertical-align:middle; font-size:14px; }
+    th { background:#f0f2f5; position:static; top:auto; z-index:auto; white-space:nowrap; }
+    tr.gold { background:#fffaf0; }
+    tr.silver { background:#f8f9fb; }
+    .score-input { width:58px; padding:7px; border:1px solid #cbd2da; border-radius:7px; text-align:center; }
+    .manual-position-input { width:82px; padding:7px; border:1px solid #cbd2da; border-radius:7px; text-align:center; }
+    .manual-value { display:inline-block; min-width:28px; font-weight:700; font-variant-numeric:tabular-nums; }
+    .manual-value.empty { color:var(--muted); font-weight:400; }
+    .tie-pending { color:#9a6700; font-weight:700; }
+    .tie-resolved { color:#18794e; font-weight:700; }
+    .save { border:0; border-radius:7px; padding:7px 10px; background:var(--accent); color:#fff; cursor:pointer; }
+    .save:disabled { opacity:.5; cursor:wait; }
+    .msg { margin:10px 0; padding:10px 12px; border-radius:9px; background:#eef6ff; display:none; }
+    .msg.error { background:#fff0f0; color:#9b1c1c; }
+    .pair { padding:10px 0; border-bottom:1px solid var(--border); }
+    .pair:last-child { border-bottom:0; }
+    .badge { display:inline-block; padding:3px 7px; border-radius:999px; font-size:11px; font-weight:700; background:#eef1f5; }
+    .badge.gold { background:var(--gold); }
+    .badge.silver { background:var(--silver); }
+    .empty { color:var(--muted); padding:20px 0; text-align:center; }
+    .loading { text-align:center; padding:50px 10px; color:var(--muted); }
+    @media (max-width:650px) {
+      header .title { font-size:20px; }
+      nav { top:65px; }
+      table { min-width:760px; }
+    }
+  </style>
+</head>
+<body>
+<script>window.IS_ADMIN = <?!= JSON.stringify(isAdmin) ?>; window.ADMIN_REQUESTED = <?!= JSON.stringify(adminRequested) ?>;</script>
+<header>
+  <div class="title" id="title">Torneo de Vóley Playa</div>
+  <div class="meta" id="meta">Cargando...</div>
+</header>
+<nav id="nav"></nav>
+<main>
+  <div id="message" class="msg"></div>
+  <div id="loading" class="loading">Cargando torneo...</div>
+  <section id="admin" class="view">
+    <h2>Administración</h2>
+    <div class="card" style="margin-bottom:14px">
+      <h3>Control del torneo</h3>
+      <div class="muted" style="margin-bottom:12px">Estas acciones solo funcionan con tu cuenta de administrador.</div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px">
+        <button class="save" onclick="adminAction('adminGeneratePhase1','Fase 1 generada')">🎲 Generar Fase 1</button>
+        <button class="save" onclick="adminAction('adminUpdateStandings','Clasificación actualizada')">📊 Actualizar clasificación</button>
+        <button class="save" onclick="adminAction('adminGenerateGoldSilver','ORO / PLATA generados')">🏆 Generar ORO / PLATA</button>
+        <button class="save" onclick="adminAction('adminGenerateKnockout','Eliminatorias generadas')">⚔️ Generar eliminatorias</button>
+        <button class="save" onclick="adminAction('adminFinishTournament','Torneo finalizado y guardado en histórico')">💾 Finalizar torneo</button>
+        <button class="save" onclick="adminNewTournament()">🧹 Nuevo torneo</button>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Estado</h3>
+      <div id="adminStatus" class="muted">Comprobando cuenta...</div>
+    </div>
+  </section>
+
+  <section id="resumen" class="view">
+    <h2>Resumen</h2>
+    <div class="grid" id="stats"></div>
+  </section>
+
+  <section id="fase1" class="view">
+    <h2>Fase 1</h2>
+    <div class="muted">Puedes introducir o corregir el resultado de cada partido.</div>
+    <div class="scroll" style="margin-top:10px"><table><thead><tr><th>#</th><th>Pista</th><th>Ronda</th><th>Equipo 1</th><th>Equipo 2</th><th>Resultado</th><th></th></tr></thead><tbody id="fase1Body"></tbody></table></div>
+  </section>
+
+  <section id="clasificacion" class="view">
+    <h2>Clasificación</h2>
+    <? if (isAdmin) { ?>
+    <div class="card" id="tieBreakCard" style="margin:10px 0 14px;display:none">
+      <strong>Resolver empates antes de generar ORO / PLATA</strong>
+      <p class="muted" style="margin:8px 0">En los grupos empatados por victorias, diferencia de puntos y puntos a favor, introduce una posición final distinta para cada jugador (por ejemplo, 5, 6 y 7). El número más bajo queda por delante. Guarda los cambios antes de generar ORO / PLATA.</p>
+      <div id="tieBreakStatus" class="muted" style="margin:8px 0"></div>
+      <button class="save" id="saveTieBreaksButton" onclick="saveManualTieBreaks()">Guardar posiciones y actualizar clasificación</button>
+    </div>
+    <? } ?>
+    <div class="scroll"><table><thead><tr><th>Pos.</th><th>Jugador</th><th>PJ</th><th>V</th><th>D</th><th>PF</th><th>PC</th><th>Dif.</th><th>%</th><th>Desempate manual (guardado)</th><? if (isAdmin) { ?><th>Editar posición</th><th>Estado</th><? } ?></tr></thead><tbody id="clasifBody"></tbody></table></div>
+  </section>
+
+  <section id="oro" class="view">
+    <h2>ORO</h2>
+    <div id="oroPairs"></div>
+  </section>
+
+  <section id="plata" class="view">
+    <h2>PLATA</h2>
+    <div id="plataPairs"></div>
+  </section>
+
+  <section id="eliminatorias" class="view">
+    <h2>Eliminatorias</h2>
+    <div class="muted">Los resultados de las eliminatorias también pueden introducirse desde aquí.</div>
+    <div id="koContent" style="margin-top:12px"></div>
+  </section>
+</main>
+
+<script>
+  let DATA = null;
+  const tabs = [
+    ['resumen','Resumen'], ['fase1','Fase 1'], ['clasificacion','Clasificación'],
+    ['oro','ORO'], ['plata','PLATA'], ['eliminatorias','Eliminatorias']
+  ];
+  if(window.IS_ADMIN) tabs.push(['admin','⚙️ Administración']);
+
+  function esc(v) {
+    return String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+  function showMessage(text, error=false) {
+    const el=document.getElementById('message');
+    el.textContent=text; el.className='msg'+(error?' error':''); el.style.display='block';
+    clearTimeout(window.msgTimer); window.msgTimer=setTimeout(()=>el.style.display='none',3500);
+  }
+  function callServer(name, ...args) {
+    return new Promise((resolve,reject)=>{
+      google.script.run.withSuccessHandler(resolve).withFailureHandler(reject)[name](...args);
+    });
+  }
+  function renderNav() {
+    const nav=document.getElementById('nav');
+    nav.innerHTML=tabs.map((t,i)=>`<button class="${i===0?'active':''}" data-view="${t[0]}">${t[1]}</button>`).join('');
+    nav.querySelectorAll('button').forEach(b=>b.onclick=()=>activate(b.dataset.view));
+  }
+  function activate(view) {
+    document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('active',b.dataset.view===view));
+    document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active',v.id===view));
+  }
+  function teamName(a,b) { return `${esc(a)} + ${esc(b)}`; }
+
+  function render() {
+    document.getElementById('loading').style.display='none';
+    const t=DATA.tournament;
+    document.getElementById('title').textContent=t.name;
+    document.getElementById('meta').textContent=`${t.date || ''} · ${t.courts} pistas · ${t.matchesPerPlayer} partidos por jugador`;
+
+    const completedF1=DATA.phase1.filter(x=>x.score1!=='' && x.score2!=='').length;
+    const completedKO=DATA.knockout.filter(x=>x.score1!=='' && x.score2!=='').length;
+    document.getElementById('stats').innerHTML=`
+      <div class="card"><div class="muted">Jugadores</div><div class="stat">${DATA.classification.length}</div></div>
+      <div class="card"><div class="muted">Partidos Fase 1</div><div class="stat">${completedF1}/${DATA.phase1.length}</div></div>
+      <div class="card"><div class="muted">Partidos eliminatorias</div><div class="stat">${completedKO}/${DATA.knockout.length}</div></div>
+      <div class="card"><div class="muted">Última actualización</div><div class="stat" style="font-size:18px">${new Date(DATA.generatedAt).toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'})}</div></div>`;
+
+    renderFase1(); renderClasif(); renderPairs(); renderKO();
+  }
+
+  function scoreEditor(type, id, s1, s2) {
+    return `<div style="display:flex;gap:5px;align-items:center;justify-content:center">
+      <input id="${type}_${esc(id)}_1" class="score-input" type="number" min="0" step="1" value="${s1 === '' ? '' : esc(s1)}">
+      <span>-</span>
+      <input id="${type}_${esc(id)}_2" class="score-input" type="number" min="0" step="1" value="${s2 === '' ? '' : esc(s2)}">
+      <button class="save" onclick="saveScore('${type}','${esc(id)}')">Guardar</button>
+    </div>`;
+  }
+
+  function renderFase1() {
+    document.getElementById('fase1Body').innerHTML=DATA.phase1.length ? DATA.phase1.map(m=>`<tr>
+      <td>${esc(m.id)}</td><td>${esc(m.court || '-')}</td><td>${esc(m.round)}</td>
+      <td>${teamName(m.team1[0],m.team1[1])}</td><td>${teamName(m.team2[0],m.team2[1])}</td>
+      <td>${scoreEditor('FASE1',m.id,m.score1,m.score2)}</td><td></td></tr>`).join('') : '<tr><td colspan="7" class="empty">Todavía no se ha generado la Fase 1.</td></tr>';
+  }
+
+  function renderClasif() {
+    const isAdmin = !!window.IS_ADMIN;
+    const body = document.getElementById('clasifBody');
+
+    // Detect ties from the actual sports criteria, independently of any warning
+    // text stored in the sheet or returned by an older server-side deployment.
+    const groups = new Map();
+    DATA.classification.forEach(r => {
+      const key = JSON.stringify([
+        Number(r.wins) || 0,
+        Number(r.diff) || 0,
+        Number(r.pointsFor) || 0
+      ]);
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(r);
+    });
+    const tiedPlayers = new Set();
+    const unresolvedGroupKeys = new Set();
+    groups.forEach((group, key) => {
+      if (group.length < 2) return;
+      group.forEach(r => tiedPlayers.add(String(r.player)));
+      const values = group.map(r => {
+        const raw = r.manualPosition;
+        if (raw === '' || raw == null || !Number.isInteger(Number(raw)) || Number(raw) <= 0) return null;
+        return Number(raw);
+      });
+      const resolvedBySheet = group.every(r => {
+        const status = String(r.tieStatus || r.sheetTieStatus || '').toUpperCase();
+        return status.includes('DESEMPATE RESUELTO') && !status.includes('PENDIENTE');
+      });
+      if (!resolvedBySheet && (values.some(value => value === null) || new Set(values).size !== values.length)) {
+        unresolvedGroupKeys.add(key);
+      }
+    });
+
+    const tieRows = DATA.classification.filter(r => tiedPlayers.has(String(r.player)));
+    body.innerHTML = DATA.classification.length ? DATA.classification.map(r => {
+      const key = JSON.stringify([Number(r.wins) || 0, Number(r.diff) || 0, Number(r.pointsFor) || 0]);
+      const tied = tiedPlayers.has(String(r.player));
+      const rawManual = r.manualPosition;
+      const numericManual = rawManual !== '' && rawManual != null &&
+        Number.isInteger(Number(rawManual)) && Number(rawManual) > 0;
+      const manualValue = numericManual ? String(Number(rawManual)) : '';
+      // This read-only cell displays the value currently stored in CLASIFICACION!J.
+      // The adjacent admin input is for changing that value before saving.
+      const savedManualCell = manualValue
+        ? `<span class="manual-value">${esc(manualValue)}</span>`
+        : '<span class="manual-value empty">—</span>';
+      const manualCell = isAdmin ? (tied
+        ? `<input class="manual-position-input" type="number" min="1" step="1" inputmode="numeric" aria-label="Nueva posición manual de ${esc(r.player)}" data-player="${esc(r.player)}" value="${esc(manualValue)}">`
+        : '<span class="muted">—</span>') : '';
+      const resolved = tied && !unresolvedGroupKeys.has(key);
+      const statusCell = isAdmin ? (tied
+        ? `<span class="${resolved ? 'tie-resolved' : 'tie-pending'}">${resolved ? 'Desempate resuelto' : 'Pendiente de resolver'}</span>`
+        : '<span class="muted">—</span>') : '';
+      return `<tr>
+        <td><strong>${esc(r.position)}</strong></td><td>${esc(r.player)}</td><td>${esc(r.played)}</td><td>${esc(r.wins)}</td><td>${esc(r.losses)}</td>
+        <td>${esc(r.pointsFor)}</td><td>${esc(r.pointsAgainst)}</td><td>${esc(r.diff)}</td><td>${(Number(r.winPct || 0) * 100).toFixed(1)}%</td><td>${savedManualCell}</td>${isAdmin ? `<td>${manualCell}</td><td>${statusCell}</td>` : ''}</tr>`;
+    }).join('') : `<tr><td colspan="${isAdmin ? 12 : 10}" class="empty">Sin clasificación todavía.</td></tr>`;
+
+    const card = document.getElementById('tieBreakCard');
+    const status = document.getElementById('tieBreakStatus');
+    const saveButton = document.getElementById('saveTieBreaksButton');
+    if (card) card.style.display = isAdmin ? 'block' : 'none';
+    if (status) {
+      status.textContent = tieRows.length
+        ? `Jugadores en grupos empatados: ${tieRows.length}. Grupos pendientes de resolver: ${unresolvedGroupKeys.size}. Introduce una posición distinta para cada jugador y guarda.`
+        : 'No hay empates deportivos pendientes de resolver en la clasificación.';
+    }
+    if (saveButton) saveButton.style.display = tieRows.length ? 'inline-block' : 'none';
+  }
+
+  async function saveManualTieBreaks() {
+    if (!window.IS_ADMIN) { showMessage('No tienes permisos de administrador.', true); return; }
+    const inputs = Array.from(document.querySelectorAll('.manual-position-input'));
+    if (!inputs.length) { showMessage('No hay posiciones pendientes de edición. Comprueba que has actualizado la clasificación.', true); return; }
+    const entries = inputs.map(input => ({ player: input.dataset.player, position: input.value.trim() }));
+    const button = document.getElementById('saveTieBreaksButton');
+    if (button) button.disabled = true;
+    try {
+      const result = await callServer('adminSaveManualTieBreaks', entries);
+      DATA = result.data;
+      render();
+      activate('clasificacion');
+      showMessage('Posiciones guardadas y clasificación recalculada.');
+    } catch (e) {
+      showMessage(e.message || String(e), true);
+    } finally {
+      const currentButton = document.getElementById('saveTieBreaksButton');
+      if (currentButton) currentButton.disabled = false;
+    }
+  }
+
+  function renderPairs() {
+    ['ORO','PLATA'].forEach(group=>{
+      const list=DATA.pairs.filter(p=>p.competition===group);
+      const el=document.getElementById(group==='ORO'?'oroPairs':'plataPairs');
+      if(!list.length){ el.innerHTML='<div class="empty">Todavía no se han generado las parejas.</div>'; return; }
+      const map={}; list.forEach(p=>map[p.pairId]=p);
+      const ids=Object.keys(map).sort((a,b)=>Number(a.split('-')[1])-Number(b.split('-')[1]));
+      el.innerHTML=ids.map(id=>{ const p=map[id]; return `<div class="card pair"><span class="badge ${group==='ORO'?'gold':'silver'}">${group}</span> <strong>${esc(id)}</strong><div style="margin-top:7px;font-size:17px">${esc(p.player)} <span class="muted">+</span> ${esc(p.partner)}</div></div>`; }).join('');
+    });
+  }
+
+  function renderKO() {
+    const el=document.getElementById('koContent');
+    if(!DATA.knockout.length){ el.innerHTML='<div class="empty">Todavía no se han generado las eliminatorias.</div>'; return; }
+    const groups=['ORO','PLATA'];
+    el.innerHTML=groups.map(group=>{
+      const rows=DATA.knockout.filter(r=>r.competition===group);
+      if(!rows.length) return '';
+      const rounds=[]; rows.forEach(r=>{ if(!rounds.includes(r.round)) rounds.push(r.round); });
+      return `<div class="card" style="margin-bottom:14px"><h3>${group}</h3>` + rounds.map(round=>{
+        const rr=rows.filter(r=>r.round===round);
+        return `<div style="margin-top:12px"><strong>${esc(round)}</strong><div class="scroll"><table style="margin-top:6px"><thead><tr><th>Partido</th><th>Pareja 1</th><th>Pareja 2</th><th>Resultado</th><th>Ganador</th></tr></thead><tbody>`+
+          rr.map(m=>`<tr><td>${esc(m.id)}</td><td>${esc(m.pair1)}</td><td>${esc(m.pair2)}</td><td>${scoreEditor('KO',m.id,m.score1,m.score2)}</td><td>${esc(m.winner || winnerFromScore(m))}</td></tr>`).join('')+
+          `</tbody></table></div></div>`;
+      }).join('')+'</div>';
+    }).join('');
+  }
+
+  function winnerFromScore(m){
+    if(m.score1==='' || m.score2==='' || m.score1==null || m.score2==null) return '';
+    const a=Number(m.score1), b=Number(m.score2); if(a===b) return ''; return a>b?m.pair1:m.pair2;
+  }
+
+  async function saveScore(type,id) {
+    const a=document.getElementById(`${type}_${id}_1`), b=document.getElementById(`${type}_${id}_2`);
+    const btn=a.parentElement.querySelector('button');
+    const s1=a.value, s2=b.value;
+    if(s1==='' || s2===''){ showMessage('Introduce los dos marcadores.',true); return; }
+    btn.disabled=true;
+    try {
+      const result=await callServer(window.IS_ADMIN ? 'adminSaveResult' : 'savePublicResult',type,id,Number(s1),Number(s2));
+      DATA=result.data; render(); showMessage('Resultado guardado.');
+    } catch(e) { showMessage(e.message || String(e),true); btn.disabled=false; }
+  }
+
+  async function adminAction(fn, successText) {
+    if(!window.IS_ADMIN){ showMessage('No tienes permisos de administrador.',true); return; }
+    try {
+      const result=await callServer(fn);
+      DATA=result;
+      render();
+      showMessage(successText);
+      activate('admin');
+    } catch(e) { showMessage(e.message || String(e),true); }
+  }
+
+  async function adminNewTournament() {
+    if(!window.IS_ADMIN){ showMessage('No tienes permisos de administrador.',true); return; }
+    if(!confirm('¿Seguro que quieres limpiar el torneo actual? El histórico no se borrará.')) return;
+    await adminAction('adminNewTournament','Nuevo torneo preparado');
+  }
+
+  async function load() {
+    renderNav();
+    if(window.ADMIN_REQUESTED && !window.IS_ADMIN){
+      document.getElementById('loading').textContent='Acceso de administrador no autorizado.';
+      return;
+    }
+    try {
+      DATA=await callServer('getPublicTournamentData');
+      render();
+      activate(window.IS_ADMIN ? 'admin' : 'resumen');
+      if(window.IS_ADMIN){
+        const status=await callServer('getAdminStatus');
+        document.getElementById('adminStatus').textContent='Administrador identificado: '+status.email;
+      }
+    } catch(e){ document.getElementById('loading').textContent='No se ha podido cargar el torneo: '+(e.message||e); }
+  }
+  load();
+</script>
+</body>
+</html>
