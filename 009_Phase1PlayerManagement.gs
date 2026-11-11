@@ -155,6 +155,10 @@ function adminAddPhase1Player(playerName) {
     SpreadsheetApp.flush();
   } catch (error) {
     phaseSheet.getRange(2, 1, phaseRows.length, 10).setValues(phaseRows);
+    const firstNewRow = phaseRows.length + 2;
+    if (phaseSheet.getLastRow() >= firstNewRow) {
+      phaseSheet.getRange(firstNewRow, 1, newRows.length, 10).clearContent();
+    }
     if (reactivated) {
       playersSheet.getRange(addedPlayerRow, 2).setValue(previousActiveValue);
     } else {
