@@ -99,6 +99,17 @@
       <h3 style="margin-top:22px">Editar / eliminar partidos</h3>
       <div class="scroll"><table style="min-width:1050px"><thead><tr><th>ID</th><th>Competición</th><th>Ronda</th><th>Pareja 1</th><th>Pareja 2</th><th>Acciones</th></tr></thead><tbody id="adminKnockoutMatches"></tbody></table></div>
     </div>
+    <div class="card" style="margin-top:14px">
+      <h3>Incorporar jugador a Fase 1</h3>
+      <p class="muted">Solo disponible antes de introducir el primer resultado. El sistema redistribuirá el mínimo de partidos posible y conservará el resto del calendario.</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:end">
+        <label style="flex:1;min-width:220px">Nombre del nuevo jugador
+          <input id="newPhase1Player" type="text" placeholder="Nombre del jugador" style="display:block;width:100%;padding:9px;border:1px solid var(--border);border-radius:7px;margin-top:4px">
+        </label>
+        <button class="save" id="addPhase1PlayerButton" onclick="addPhase1Player()">Añadir y equilibrar Fase 1</button>
+      </div>
+      <div id="phase1PlayerCounts" class="muted" style="margin-top:12px"></div>
+    </div>
   </section>
 
   <section id="resumen" class="view">
@@ -189,7 +200,46 @@
       <div class="card"><div class="muted">Última actualización</div><div class="stat" style="font-size:18px">${new Date(DATA.generatedAt).toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'})}</div></div>`;
 
     renderFase1(); renderClasif(); renderPairs(); renderKO();
+    if (window.IS_ADMIN) renderAdminPhase1Counts();
     if (window.IS_ADMIN) renderAdminKnockout();
+  }
+
+  function renderAdminPhase1Counts() {
+    const counts = new Map();
+    (DATA.phase1 || []).forEach(match => {
+      [match.team1[0], match.team1[1], match.team2[0], match.team2[1]].forEach(player => {
+        const name = String(player || '').trim();
+        if (name) counts.set(name, (counts.get(name) || 0) + 1);
+      });
+    });
+    const values = Array.from(counts.entries());
+    const target = document.getElementById('phase1PlayerCounts');
+    if (target) target.textContent = values.length
+      ? 'Partidos actuales por jugador: ' + values.map(([name, count]) => name + ': ' + count).join(' · ')
+      : 'Todavía no hay partidos generados.';
+  }
+
+  async function addPhase1Player() {
+    if (!window.IS_ADMIN) { showMessage('No tienes permisos de administrador.', true); return; }
+    const input = document.getElementById('newPhase1Player');
+    const button = document.getElementById('addPhase1PlayerButton');
+    const name = input.value.trim();
+    if (!name) { showMessage('Escribe el nombre del jugador.', true); return; }
+    if (!confirm('Se redistribuirán algunos partidos de Fase 1. Esta operación solo está permitida antes de introducir resultados. ¿Continuar?')) return;
+    button.disabled = true;
+    try {
+      const result = await callServer('adminAddPhase1Player', name);
+      DATA = result.data;
+      input.value = '';
+      render();
+      activate('admin');
+      showMessage('Jugador añadido. Partidos modificados: ' + result.modifiedMatches.length +
+        '. Partidos nuevos: ' + result.addedMatches.length + '.');
+    } catch (e) {
+      showMessage(e.message || String(e), true);
+    } finally {
+      button.disabled = false;
+    }
   }
 
   function scoreEditor(type, id, s1, s2) {
