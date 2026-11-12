@@ -57,7 +57,7 @@ function generatePhase1() {
   const genderMap = (genderRules.rule1 || genderRules.rule2 || genderRules.rule3)
     ? getPhase1GenderMap_(players)
     : new Map();
-  const blMap = getPhase1BLMap_(players);
+  const blMap = getPhase1BLRule_() ? getPhase1BLMap_(players) : null;
   if (players.length < 4) throw new Error('Se necesitan al menos 4 players.');
   if (cfg.matchesPerPlayer < cfg.minimumMatches) throw new Error(`El mínimo de matches por player es ${cfg.minimumMatches}.`);
   if ((players.length * cfg.matchesPerPlayer) % 4 !== 0) {
@@ -88,7 +88,7 @@ function generatePhase1() {
         ]);
       }
       if (validatePhase1GenderSchedule_(candidate, genderMap, genderRules).valid &&
-          validatePhase1BLSchedule_(candidate, blMap).valid) {
+          (!blMap || validatePhase1BLSchedule_(candidate, blMap).valid)) {
         schedule.push(...candidate);
         validSchedule = true;
       }
@@ -131,7 +131,7 @@ function generatePhase1() {
             const key2 = pairKey(form[1][0], form[1][1]);
             if (!usedPairs.has(key1) && !usedPairs.has(key2) &&
                 isPhase1GenderMatchValid_(form[0], form[1], genderMap, genderRules) &&
-                validatePhase1BLSchedule_(schedule.concat([form]), blMap).valid) {
+                (!blMap || validatePhase1BLSchedule_(schedule.concat([form]), blMap).valid)) {
               found = form;
               break;
             }
@@ -145,7 +145,7 @@ function generatePhase1() {
       }
       generated = ok && Object.values(counts).every(value => value === cfg.matchesPerPlayer) &&
         validatePhase1GenderSchedule_(schedule, genderMap, genderRules).valid &&
-        validatePhase1BLSchedule_(schedule, blMap).valid;
+        (!blMap || validatePhase1BLSchedule_(schedule, blMap).valid);
     }
     if (!generated) {
       throw new Error('No he encontrado una combinación válida que cumpla el reparto de partidos, no repita compañeros y respete las reglas de género y BL activas. Prueba otra configuración.');
