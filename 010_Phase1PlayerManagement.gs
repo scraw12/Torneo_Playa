@@ -160,6 +160,9 @@ function adminAddPhase1Player(playerData) {
     addedPlayerRow = existingPlayerRow + 2;
     previousActiveValue = playerRows[existingPlayerRow][1];
     playersSheet.getRange(addedPlayerRow, 2).setValue(true);
+    const genderColumn = playersSheet.getRange(1, 1, 1, playerWidth).getValues()[0]
+      .findIndex(value => normalizeGenderHeader_(value) === 'genero');
+    if (genderColumn >= 0) playersSheet.getRange(addedPlayerRow, genderColumn + 1).setValue(newGender === 'chico' ? 'Chico' : 'Chica');
     reactivated = true;
   } else {
     addedPlayerRow = playerLastRow + 1;
