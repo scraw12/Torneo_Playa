@@ -89,3 +89,10 @@ Para completar la especificación funcional hay que contrastar con el código vi
 ## Revisión del código fuente
 
 El comportamiento implementado y los hallazgos técnicos se documentan en [Revisión estática del código](CODE_REVIEW.md). Esa revisión distingue la lógica observada de los riesgos pendientes y de las pruebas que todavía no se han ejecutado.
+
+
+## Permisos de la Web App
+
+La vista pública puede guardar y modificar marcadores de Fase 1 y eliminatorias, tanto de forma individual como múltiple. La asignación de un jugador a un slot `PENDIENTE` queda restringida a administradores: el editor solo se muestra en la vista administrativa y el endpoint de servidor exige `requireAdmin()`. No se permite registrar el resultado de una eliminatoria mientras alguna de sus parejas siga conteniendo `PENDIENTE`.
+
+La revisión de implementación y los casos de prueba están en [CODE_REVIEW.md](CODE_REVIEW.md) y [tests/README.md](../tests/README.md).
