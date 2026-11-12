@@ -276,6 +276,9 @@ function findPhase1InsertionPlan_(phaseRows, matchesPerPlayer, usedPairs, gender
       const proposedRows = phaseRows.map(row => row.slice());
       selected.forEach(item => { proposedRows[item.rowIndex][item.columnIndex] = newPlayerName; });
       const proposedMatches = proposedRows.map(row => [[String(row[3]), String(row[4])], [String(row[6]), String(row[7])]]);
+      for (let i = 0; i < newPairs.length; i += 2) {
+        proposedMatches.push([newPairs[i], newPairs[i + 1]]);
+      }
       if (!validatePhase1GenderSchedule_(proposedMatches, genderMap, genderRules).valid) return null;
       return { replacements: selected.slice(), newPairs: newPairs };
     }
