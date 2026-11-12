@@ -82,3 +82,17 @@ El generador utiliza búsqueda con retroceso y límites de tiempo/nodos para evi
 ## Despliegue y pruebas
 
 Los cambios de código deben copiarse/sincronizarse con el proyecto de Apps Script y después desplegarse de nuevo como Web App para probarlos. Los cambios documentados en la rama de desarrollo no implican que estén ya desplegados ni validados en la hoja real.
+
+
+## Pruebas automatizadas de Fase 1
+
+En la rama `test/phase1-bl-aware-generator` está el archivo `014_Phase1BLGeneratorTests.gs`. Copia ese archivo junto con los archivos de producción `001_Utils.gs`, `012_TournamentRules.gs` y `013_Phase1BLGenerator.gs` en un proyecto de prueba de Apps Script.
+
+Desde el editor de Apps Script ejecuta:
+
+- `runPhase1BLGeneratorTests()`: pruebas de validadores BL, independencia de contadores, exención de jugadores BL, reglas de género y generación con 3, 4 y 5 partidos por jugador.
+- `runPhase1BLGeneratorStressTests()`: escenario ampliado de 29 jugadores, 4 partidos por jugador y 4 jugadores BL.
+
+Las pruebas utilizan datos sintéticos en memoria. No leen ni modifican hojas, propiedades del proyecto ni calendarios reales. Los resultados se muestran en el registro de ejecución; si falla una prueba, la función lanza una excepción al terminar para que el fallo sea visible.
+
+La búsqueda del generador tiene límites de tiempo y nodos. Por ello, un fallo en una prueba de generación significa que no se encontró solución dentro de esos límites; no demuestra por sí solo que el escenario sea matemáticamente imposible. Repetir una prueba puede dar resultados distintos porque el generador utiliza aleatoriedad.
