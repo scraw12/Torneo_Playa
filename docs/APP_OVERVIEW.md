@@ -84,3 +84,8 @@ La ausencia de fórmulas en el libro no significa que no existan cálculos: esto
 ## Pendiente de verificación en código
 
 Para completar la especificación funcional hay que contrastar con el código vigente las fórmulas/cálculos de clasificación e históricos, las restricciones de generación, los valores por defecto de reglas, las relaciones por ID y las protecciones o permisos aplicados desde Apps Script.
+
+
+## Revisión del código fuente
+
+El comportamiento implementado y los hallazgos técnicos se documentan en [Revisión estática del código](CODE_REVIEW.md). Esa revisión distingue la lógica observada de los riesgos pendientes y de las pruebas que todavía no se han ejecutado.
