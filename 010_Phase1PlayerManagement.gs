@@ -2,8 +2,8 @@
  * Adds one player to an already generated Phase 1 schedule with the minimum
  * possible number of changed matches. Blocked after any Phase 1 score is entered.
  */
-function adminAddPhase1Player(playerData) {
-  requireAdmin();
+function adminAddPhase1Player(sessionToken, playerData) {
+  requireAdmin(sessionToken);
   const payload = playerData && typeof playerData === 'object' ? playerData : { name: playerData };
   const name = String(payload.name || '').trim();
   const newGender = normalizePlayerGender_(payload.gender);
