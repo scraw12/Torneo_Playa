@@ -291,7 +291,7 @@ function findPhase1InsertionPlan_(phaseRows, matchesPerPlayer, usedPairs, gender
         proposedMatches.push([newPairs[i], newPairs[i + 1]]);
       }
       if (!validatePhase1GenderSchedule_(proposedMatches, genderMap, genderRules).valid ||
-          !validatePhase1BLSchedule_(proposedMatches, blMap).valid) return null;
+          (blMap && !validatePhase1BLSchedule_(proposedMatches, blMap).valid)) return null;
       return { replacements: selected.slice(), newPairs: newPairs };
     }
 
@@ -324,7 +324,7 @@ function findPhase1InsertionPlan_(phaseRows, matchesPerPlayer, usedPairs, gender
  * Forma partidos con los jugadores desplazados y comprueba las reglas activas.
  */
 function findGenderValidNewPhase1Pairs_(players, usedPairs, genderMap, genderRules, blMap, baseMatches) {
-  if (players.length === 0) return validatePhase1BLSchedule_(baseMatches || [], blMap || new Map()).valid ? [] : null;
+  if (players.length === 0) return (!blMap || validatePhase1BLSchedule_(baseMatches || [], blMap).valid) ? [] : null;
   if (players.length % 4 !== 0) return null;
   const first = players[0];
   for (const teammate1 of shuffle(players.slice(1))) {
