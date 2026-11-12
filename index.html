@@ -237,10 +237,14 @@
     const button = document.getElementById('addPhase1PlayerButton');
     const name = input.value.trim();
     if (!name) { showMessage('Escribe el nombre del jugador.', true); return; }
+    const genderAnswer = prompt('Indica el género del jugador (Chico o Chica):');
+    if (genderAnswer === null) return;
+    const gender = genderAnswer.trim();
+    if (!/^(chico|chica)$/i.test(gender)) { showMessage('El género debe ser Chico o Chica.', true); return; }
     if (!confirm('Se redistribuirán algunos partidos de Fase 1. Esta operación solo está permitida antes de introducir resultados. ¿Continuar?')) return;
     setButtonLoading(button, 'Añadiendo jugador...');
     try {
-      const result = await callServer('adminAddPhase1Player', name);
+      const result = await callServer('adminAddPhase1Player', { name: name, gender: gender });
       DATA = result.data;
       input.value = '';
       render();
