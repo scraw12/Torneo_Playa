@@ -50,8 +50,8 @@ function buildPublicClassification_(rows) {
 }
 
 /** Saves manual final positions for tied players. Administrator-only. */
-function adminSaveManualTieBreaks(entries) {
-  requireAdmin();
+function adminSaveManualTieBreaks(sessionToken, entries) {
+  requireAdmin(sessionToken);
   if (!Array.isArray(entries)) throw new Error('Los datos de desempate no son válidos.');
 
   const sheet = SpreadsheetApp.getActive().getSheetByName(SHEETS.STANDINGS);
