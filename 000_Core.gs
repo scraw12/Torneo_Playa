@@ -30,7 +30,7 @@ function onOpen() {
     .addSeparator()
     .addItem('💾 Finalizar tournament y actualizar histórico', 'finishTournament')
     .addItem('👥 Usuarios de administración', 'openAdminUserSetup')
-    .addItem('🧹 Nuevo tournament', 'newTournament_')
+    .addItem('🧹 Nuevo tournament', 'newTournament')
     .addToUi();
 }
 
