@@ -86,3 +86,16 @@ function adminSaveResult(matchType, matchId, score1, score2) {
   requireAdmin();
   return savePublicResult(matchType, matchId, score1, score2);
 }
+
+
+/** Devuelve la configuración de reglas solo al administrador. */
+function adminGetPhase1GenderRules() {
+  requireAdmin();
+  return getPhase1GenderRules_();
+}
+
+/** Guarda la configuración de reglas solo al administrador. */
+function adminSavePhase1GenderRules(settings) {
+  requireAdmin();
+  return savePhase1GenderRules_(settings);
+}
