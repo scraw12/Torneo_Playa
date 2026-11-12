@@ -73,7 +73,7 @@ function testPhase1BLValidatorIndependentLimits_() {
   const bl = phase1TestBLMap_(['B', 'D']);
   const matches = [
     [['A', 'B'], ['C', 'E']], // A uses partner-BL allowance
-    [['A', 'C'], ['D', 'F']]  // A uses opponent-BL allowance
+    [['A', 'F'], ['D', 'G']]  // A uses opponent-BL allowance; F also faces BL only once
   ];
   phase1TestAssert_(validatePhase1BLSchedule_(matches, bl).valid,
     'Los límites de compañero y rival deben ser independientes.');
