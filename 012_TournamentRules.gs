@@ -8,6 +8,54 @@
  * Valores admitidos en JUGADORES: "Chico" y "Chica".
  */
 
+
+/**
+ * Perfil recomendado de Fase 1 según el tamaño del grupo.
+ * Los tramos se separan en bloques con una diferencia de cinco jugadores:
+ * 24-29: hasta 4 BL y 4 partidos; 30-35: hasta 5 BL y 4 partidos;
+ * 36-40: hasta 6 BL y 3 partidos.
+ *
+ * No limita el número total de jugadores: fuera de estos tramos no aplica
+ * estas restricciones de perfil.
+ */
+function getPhase1TournamentProfile_(playerCount) {
+  if (playerCount >= 24 && playerCount <= 29) {
+    return { minPlayers: 24, maxPlayers: 29, maxBL: 4, matchesPerPlayer: 4 };
+  }
+  if (playerCount >= 30 && playerCount <= 35) {
+    return { minPlayers: 30, maxPlayers: 35, maxBL: 5, matchesPerPlayer: 4 };
+  }
+  if (playerCount >= 36 && playerCount <= 40) {
+    return { minPlayers: 36, maxPlayers: 40, maxBL: 6, matchesPerPlayer: 3 };
+  }
+  return null;
+}
+
+/** Valida BL y partidos/jugador sin imponer un rango obligatorio de jugadores. */
+function validatePhase1TournamentProfile_(playerCount, matchesPerPlayer, blMap) {
+  const profile = getPhase1TournamentProfile_(playerCount);
+  if (!profile) return { valid: true, profile: null };
+
+  const blCount = blMap
+    ? Array.from(blMap.values()).filter(value => value === true).length
+    : 0;
+  if (blCount > profile.maxBL) {
+    throw new Error(
+      'BL_COUNT_EXCEEDED: Para ' + profile.minPlayers + '-' + profile.maxPlayers +
+      ' jugadores se permiten como máximo ' + profile.maxBL +
+      ' jugadores BL; hay ' + blCount + '.'
+    );
+  }
+  if (matchesPerPlayer !== profile.matchesPerPlayer) {
+    throw new Error(
+      'MATCH_COUNT_NOT_ALLOWED: Para ' + profile.minPlayers + '-' + profile.maxPlayers +
+      ' jugadores debes configurar ' + profile.matchesPerPlayer +
+      ' partidos por jugador; tienes ' + matchesPerPlayer + '.'
+    );
+  }
+  return { valid: true, profile: profile, blCount: blCount };
+}
+
 /**
  * REGLA 1 - FASE 1:
  * Una pareja formada por dos chicas solo puede enfrentarse a otra pareja
