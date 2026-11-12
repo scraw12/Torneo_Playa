@@ -47,9 +47,9 @@ function setupTournament() {
       ['Mínimo de matches',3],
       ['Jugadores en ORO',0]
     ],
-    JUGADORES: [['Jugador','Activo'],['Alejandro',true],['Marta',true],['Laura',true],['Sergio',true]],
+    JUGADORES: [['Jugador','Activo','Partidos','Genero','BL'],['Alejandro',true,0,'Chico',''],['Marta',true,0,'Chica',''],['Laura',true,0,'Chica',''],['Sergio',true,0,'Chico','']],
     FASE1: [['Partido','Pista','Ronda','Jugador 1','Jugador 2', 'VS','Jugador 3','Jugador 4','Puntos team 1','Puntos team 2']],
-    CLASIFICACION: [['Pos.','Jugador','PJ','V','D','PF','PC','Dif.','% Vict.','Desempate manual']],
+    CLASIFICACION: [['Pos.','Jugador','PJ','V','D','PF','PC','Dif.','% Vict.','Desempate manual','Aviso']],
     ORO_PLATA: [['Competición','Pos.','Jugador','Pareja','ID Pareja']],
     ELIMINATORIAS: [['Competición','Ronda','Partido','Pareja 1','Pareja 2','Puntos 1','Puntos 2','Ganador']],
     HIST_JUGADORES: [['Jugador','Torneos','PJ','V','D','PF','PC','Dif.','% Vict.','Oro campeón','Oro subcampeón','Plata campeón','Plata subcampeón']],
@@ -78,6 +78,15 @@ function setupTournament() {
     sh.autoResizeColumns(1, width);
   });
 
+  // Complete legacy sheets without moving or overwriting existing player data.
+  ensureRequiredHeaders_(ss.getSheetByName(SHEETS.PLAYERS), [
+    'Jugador', 'Activo', 'Partidos', 'Genero', 'BL'
+  ]);
+  ensureRequiredHeaders_(ss.getSheetByName(SHEETS.STANDINGS), [
+    'Pos.', 'Jugador', 'PJ', 'V', 'D', 'PF', 'PC', 'Dif.', '% Vict.',
+    'Desempate manual', 'Aviso'
+  ]);
+
   const panel = ss.getSheetByName(SHEETS.PANEL);
   panel.getRange('B3:B8').insertCheckboxes();
   panel.getRange('A10').setValue('Usa los checkboxes o el menú 🏐 TORNEO. Los results se introducen directamente en FASE1 y ELIMINATORIAS.');
@@ -87,6 +96,22 @@ function setupTournament() {
   panel.setColumnWidth(2, 100);
   ss.getSheetByName(SHEETS.CONFIG).getRange('B3').setNumberFormat('dd/mm/yyyy');
   SpreadsheetApp.getUi().alert('Estructura comprobada. Se han conservado los data existentes y el histórico.');
+}
+
+/**
+ * Adds missing required headers at the end of a sheet without overwriting
+ * existing headers or row data. Existing column positions are preserved.
+ */
+function ensureRequiredHeaders_(sheet, requiredHeaders) {
+  if (!sheet) throw new Error('No se encuentra la hoja para comprobar sus cabeceras.');
+  const lastColumn = Math.max(1, sheet.getLastColumn());
+  const currentHeaders = sheet.getRange(1, 1, 1, lastColumn).getValues()[0]
+    .map(value => String(value || '').trim());
+  const missing = requiredHeaders.filter(header => !currentHeaders.includes(header));
+  if (!missing.length) return [];
+  const startColumn = sheet.getLastColumn() + 1;
+  sheet.getRange(1, startColumn, 1, missing.length).setValues([missing]);
+  return missing;
 }
 
 function getConfig() {
