@@ -159,6 +159,98 @@ function validatePhase1GenderSchedule_(matches, genderMap, rules) {
   return { valid: true };
 }
 
+/**
+ * Asegura que JUGADORES tenga la columna BL. Se añade al final si aún no existe.
+ */
+function ensurePhase1BLColumn_() {
+  const sheet = SpreadsheetApp.getActive().getSheetByName(SHEETS.PLAYERS);
+  if (!sheet) throw new Error('No se encuentra la hoja JUGADORES.');
+  const lastColumn = Math.max(1, sheet.getLastColumn());
+  const headers = sheet.getRange(1, 1, 1, lastColumn).getValues()[0];
+  let column = headers.findIndex(value => normalizeGenderHeader_(value) === 'bl');
+  if (column < 0) {
+    column = lastColumn;
+    sheet.getRange(1, column + 1).setValue('BL');
+  }
+  return column;
+}
+
+/**
+ * Devuelve un mapa nombre normalizado -> true cuando el jugador tiene X en BL.
+ * La columna se crea automáticamente al final de JUGADORES si falta.
+ */
+function getPhase1BLMap_(players) {
+  const sheet = SpreadsheetApp.getActive().getSheetByName(SHEETS.PLAYERS);
+  const blColumn = ensurePhase1BLColumn_();
+  const lastRow = sheet.getLastRow();
+  const rows = lastRow >= 2
+    ? sheet.getRange(2, 1, lastRow - 1, Math.max(sheet.getLastColumn(), blColumn + 1)).getValues()
+    : [];
+  const activeBL = new Map();
+  rows.forEach(row => {
+    const name = String(row[0] || '').trim();
+    const active = row[1] === true || row[1] === '' ||
+      String(row[1]).trim().toLowerCase() === 'true';
+    if (!name || !active) return;
+    const key = normalizePlayerKey_(name);
+    if (activeBL.has(key)) throw new Error('Hay jugadores activos duplicados en JUGADORES: ' + name + '.');
+    activeBL.set(key, String(row[blColumn] || '').trim().toUpperCase() === 'X');
+  });
+  (players || []).forEach(name => {
+    if (!activeBL.has(normalizePlayerKey_(name))) {
+      throw new Error('No se ha podido leer la marca BL del jugador ' + name + '.');
+    }
+  });
+  return activeBL;
+}
+
+/**
+ * Regla BL de Fase 1:
+ * - Un jugador sin BL puede jugar como máximo un partido con compañero BL.
+ * - Un jugador sin BL puede jugar como máximo un partido contra un equipo con BL.
+ * Ambos límites son independientes. Los jugadores BL no tienen límites BL propios.
+ */
+function validatePhase1BLSchedule_(matches, blMap) {
+  const partnerMatches = new Map();
+  const opponentMatches = new Map();
+  for (let i = 0; i < matches.length; i++) {
+    const match = matches[i];
+    const team1 = match[0] || [];
+    const team2 = match[1] || [];
+    const team1HasBL = team1.some(name => blMap.get(normalizePlayerKey_(name)) === true);
+    const team2HasBL = team2.some(name => blMap.get(normalizePlayerKey_(name)) === true);
+
+    [[team1, team2HasBL], [team2, team1HasBL]].forEach(entry => {
+      const team = entry[0];
+      const opposingTeamHasBL = entry[1];
+      team.forEach((name, index) => {
+        const key = normalizePlayerKey_(name);
+        if (blMap.get(key) === true) return;
+        const teammate = team[1 - index];
+        if (teammate && blMap.get(normalizePlayerKey_(teammate)) === true) {
+          const count = (partnerMatches.get(key) || 0) + 1;
+          partnerMatches.set(key, count);
+          if (count > 1) {
+            return;
+          }
+        }
+        if (opposingTeamHasBL) {
+          const count = (opponentMatches.get(key) || 0) + 1;
+          opponentMatches.set(key, count);
+        }
+      });
+    });
+
+    for (const [key, count] of partnerMatches.entries()) {
+      if (count > 1) return { valid: false, reason: 'BL_COMPANERO', player: key, matchNumber: i + 1 };
+    }
+    for (const [key, count] of opponentMatches.entries()) {
+      if (count > 1) return { valid: false, reason: 'BL_RIVAL', player: key, matchNumber: i + 1 };
+    }
+  }
+  return { valid: true };
+}
+
 /** Normaliza la cabecera para localizar "Genero" aunque lleve tilde. */
 function normalizeGenderHeader_(value) {
   return String(value || '').trim().toLowerCase()
