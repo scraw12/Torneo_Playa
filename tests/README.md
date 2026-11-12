@@ -6,15 +6,15 @@ Las pruebas se organizan por archivo/módulo de producción con la convención `
 
 Ejecuta `runAllModuleTests()` desde el editor de Apps Script para lanzar las suites registradas. También puedes ejecutar cada suite individualmente.
 
-Las pruebas unitarias actuales usan datos en memoria. Las suites marcadas como `SKIPPED` son esqueletos intencionados: identifican módulos que necesitan una fixture aislada de Google Sheets, permisos o Web App antes de probar operaciones con efectos secundarios. No se debe ejecutar una prueba de integración contra el torneo real.
+Las pruebas de integración usan hojas temporales dentro del mismo Spreadsheet. El helper renombra las hojas reales durante la ejecución, crea fixtures con los nombres de producción y restaura las hojas originales y las Script Properties en un bloque `finally`. Se ejecutan bajo un bloqueo de documento. No cierres la ejecución mientras esté en curso. Las pruebas no deben lanzarse simultáneamente con un torneo en uso.
 
 ## Estado de cobertura inicial
 
 | Módulo | Archivo de test | Estado |
 |---|---|---|
-| 000 Core | `000_Core.test.gs` | Pendiente: fixture SpreadsheetApp |
+| 000 Core | `000_Core.test.gs` | Fixture temporal compartida por integración |
 | 001 Utils | `001_Utils.test.gs` | Unit tests |
-| 002 Phase 1 | `002_Phase1.test.gs` | Pendiente: fixture de hojas |
+| 002 Phase 1 | `002_Phase1.test.gs` | Integración: generación + resultados + clasificación |
 | 003 Standings | `003_Standings.test.gs` | Unit tests |
 | 004 Final Stage | `004_FinalStage.test.gs` | Unit tests |
 | 005 Knockouts | `005_Knockouts.test.gs` | Pendiente: fixture de cuadro |
