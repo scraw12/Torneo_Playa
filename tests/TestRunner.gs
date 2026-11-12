@@ -17,7 +17,7 @@ function runAllModuleTests() {
     { name: '009 Knockout management', run: test009KnockoutManagement },
     { name: '012 Tournament rules', run: test012TournamentRules },
     { name: '013 Phase 1 BL generator', run: runPhase1BLGeneratorTests },
-    { name: '000 Core integration', run: test000CoreRequiresSpreadsheetFixture }
+    { name: '000 Core integration', run: test000CoreTemporaryFixture }
   ];
   const results = [];
   suites.forEach(suite => {
