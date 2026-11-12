@@ -79,12 +79,13 @@ function savePublicResult(matchType, matchId, score1, score2) {
 
   const width = normalizedType === 'FASE1' ? 10 : 8;
   const rows = sh.getRange(2, 1, last - 1, width).getValues();
-  if(normalizedType === 'FASE 1') {
-    const rowIndex = rows.findIndex(r => String(r[0]) === id);
-  } else if(normalizedType === 'ELIMINATORIAS') {
-    const rowIndex = rows.findIndex(r => String(r[2]) === id);
+  let rowIndex = -1;
+  if (normalizedType === 'FASE1') {
+    rowIndex = rows.findIndex(r => String(r[0]) === id);
+  } else if (normalizedType === 'ELIMINATORIAS') {
+    rowIndex = rows.findIndex(r => String(r[2]) === id);
   }
-  
+
   if (rowIndex < 0) throw new Error('No se ha encontrado ese partido.');
 
   const row = rows[rowIndex];
