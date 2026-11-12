@@ -6,9 +6,9 @@
  * Methods and variables are kept in English for maintainability.
  */
 
-function finishTournament() {
+function finishTournament_() {
   const ss=SpreadsheetApp.getActive();
-  updateStandings();
+  updateStandings_();
   const cl=ss.getSheetByName(SHEETS.STANDINGS);
   const playerHistory=ss.getSheetByName(SHEETS.PLAYER_HISTORY);
   const tournamentHistory=ss.getSheetByName(SHEETS.TOURNAMENT_HISTORY);
@@ -74,7 +74,7 @@ function finishTournament() {
   SpreadsheetApp.getActive().toast('Torneo finalizado y añadido al histórico.');
 }
 
-function newTournament() {
+function newTournament_() {
   const ui=SpreadsheetApp.getUi();
   const ans=ui.alert('Nuevo tournament','¿Seguro que quieres borrar los data del tournament actual? El histórico NO se borrará.',ui.ButtonSet.YES_NO);
   if(ans!==ui.Button.YES) return;
@@ -95,12 +95,12 @@ function onEdit(e) {
   if(e.value!=='TRUE') return;
   const row=e.range.getRow();
   try {
-    if(row===3) generatePhase1();
-    if(row===4) updateStandings();
-    if(row===5) generateGoldSilver();
-    if(row===6) generateKnockout();
-    if(row===7) finishTournament();
-    if(row===8) newTournament();
+    if(row===3) generatePhase1_();
+    if(row===4) updateStandings_();
+    if(row===5) generateGoldSilver_();
+    if(row===6) generateKnockout_();
+    if(row===7) finishTournament_();
+    if(row===8) newTournament_();
   } catch(err) {
     SpreadsheetApp.getActive().toast(String(err.message || err));
   } finally {
