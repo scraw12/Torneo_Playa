@@ -21,7 +21,7 @@ const SHEETS = {
 function onOpen() {
   SpreadsheetApp.getUi()
     .createMenu('🏐 TORNEO')
-    .addItem('⚙️ Preparar / actualizar estructura', 'setupTournament_')
+    .addItem('⚙️ Preparar / actualizar estructura', 'setupTournament')
     .addSeparator()
     .addItem('🎲 Generar Fase 1', 'generatePhase1')
     .addItem('📊 Actualizar clasificación', 'updateStandings')
@@ -32,6 +32,11 @@ function onOpen() {
     .addItem('👥 Usuarios de administración', 'openAdminUserSetup')
     .addItem('🧹 Nuevo tournament', 'newTournament_')
     .addToUi();
+}
+
+function setupTournament() {
+  requireEditorOwner_();
+  setupTournament_();
 }
 
 function setupTournament_() {
