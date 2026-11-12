@@ -52,8 +52,11 @@ function generatePhase1() {
   const ss = SpreadsheetApp.getActive();
   const cfg = getConfig();
   const players = getPlayers();
-  // Regla 1: leer los géneros antes de construir cualquier enfrentamiento.
-  const genderMap = getPhase1GenderMap_(players);
+  // Solo se exigen géneros completos cuando hay alguna regla activa.
+  const genderRules = getPhase1GenderRules_();
+  const genderMap = (genderRules.rule1 || genderRules.rule2)
+    ? getPhase1GenderMap_(players)
+    : new Map();
   if (players.length < 4) throw new Error('Se necesitan al menos 4 players.');
   if (cfg.matchesPerPlayer < cfg.minimumMatches) throw new Error(`El mínimo de matches por player es ${cfg.minimumMatches}.`);
   if ((players.length * cfg.matchesPerPlayer) % 4 !== 0) {
