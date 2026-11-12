@@ -96,18 +96,20 @@ La acción está protegida con `requireAdmin()`.
 - La configuración de reglas se carga al entrar en Administración y se guarda mediante llamadas a Apps Script.
 - Todas las acciones administrativas del backend deben comprobar permisos con `requireAdmin()`.
 
-## Estado del generador y limitación pendiente
+## Generador BL-aware de Fase 1
 
-En `002_Phase1.gs`, cuando hay exactamente 4 partidos por jugador y al menos 6 jugadores, se usa una construcción cíclica especial:
-- Se baraja el orden de jugadores.
-- Para cada índice se construye un partido con los jugadores de las posiciones `i`, `i+1`, `i+2` e `i+4` (índices cíclicos).
-- Se prueban hasta 5.000 órdenes aleatorios.
-- Se valida el calendario completo contra las reglas de género activas y, si está activada, contra la regla BL.
-- Si no se encuentra solución, se lanza un error y el calendario anterior no se reemplaza.
+`002_Phase1.gs` selecciona el generador `generatePhase1FourBLPlayers_()` cuando se cumplen todas estas condiciones:
+- 4 partidos por jugador.
+- Al menos 28 jugadores activos.
+- Exactamente 4 jugadores con BL y la regla BL activada.
 
-**Limitación conocida:** este procedimiento solo explora una familia restringida de calendarios. Agotar 5.000 intentos no demuestra que no exista una solución matemática; puede significar que el algoritmo no ha encontrado una dentro de los órdenes probados.
+La implementación está en `013_Phase1BLGenerator.gs` y trabaja en dos etapas:
+1. **Esqueleto BL (10 partidos):** genera los seis emparejamientos posibles entre los cuatro jugadores BL (cada pareja BL juega junta una vez) y un partido adicional por jugador BL junto a un jugador sin BL. Los puestos restantes de esos partidos se asignan a jugadores sin BL distintos. Así cada jugador sin BL consume como máximo una vez el contador de compañero BL o el contador de rival BL; los contadores son independientes.
+2. **Completar calendario:** programa las apariciones restantes solo entre jugadores sin BL mediante búsqueda recursiva, evitando parejas de compañeros repetidas y aplicando las reglas de género por partido. Al terminar valida el calendario completo, incluida la regla de género 3 y ambos contadores BL.
 
-Caso observado por el usuario: 29 jugadores, 4 partidos por jugador y 4 jugadores con BL marcado. La generación falla incluso al dejar activa únicamente la regla BL. La regla BL no debe relajarse para ocultar el problema. Queda pendiente mejorar la construcción del calendario para incorporar las restricciones BL durante la generación, conservando el reparto exacto y la prohibición de repetir compañeros. Esta mejora todavía **no está implementada**.
+Límites internos actuales: hasta 500 intentos de esqueleto, 25 segundos de búsqueda total y 12.000 nodos de búsqueda residual por intento. Si no encuentra una solución dentro de esos límites, devuelve error; el calendario previo no se modifica.
+
+Para otras cantidades de jugadores BL, menos de 28 jugadores o configuraciones distintas de 4 partidos por jugador, se mantiene el generador anterior. La implementación nueva todavía **no está probada en Apps Script ni con los datos reales**. Hay que probar especialmente el caso observado de 29 jugadores, 4 partidos por jugador y 4 jugadores BL, con cada combinación de reglas de género que se utilice habitualmente.
 
 ## Archivos relevantes
 
