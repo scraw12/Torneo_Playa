@@ -94,7 +94,7 @@ function generatePhase1() {
       }
     }
     if (!validSchedule) {
-      throw new Error('No he encontrado un calendario que cumpla las reglas de género activas manteniendo cuatro partidos por jugador y sin repetir compañeros. Revisa la distribución de jugadores o prueba otra configuración.');
+      throw new Error('No he encontrado un calendario que cumpla las reglas de género y BL activas, manteniendo el reparto de partidos y sin repetir compañeros. Revisa la distribución de jugadores o prueba otra configuración.');
     }
     schedule.forEach(match => {
       match.flat().forEach(player => counts[player]++);
@@ -130,7 +130,8 @@ function generatePhase1() {
             const key1 = pairKey(form[0][0], form[0][1]);
             const key2 = pairKey(form[1][0], form[1][1]);
             if (!usedPairs.has(key1) && !usedPairs.has(key2) &&
-                isPhase1GenderMatchValid_(form[0], form[1], genderMap, genderRules)) {
+                isPhase1GenderMatchValid_(form[0], form[1], genderMap, genderRules) &&
+                validatePhase1BLSchedule_(schedule.concat([form]), blMap).valid) {
               found = form;
               break;
             }
@@ -147,7 +148,7 @@ function generatePhase1() {
         validatePhase1BLSchedule_(schedule, blMap).valid;
     }
     if (!generated) {
-      throw new Error('No he encontrado una combinación válida que cumpla el reparto de partidos, no repita compañeros y respete las reglas de género activas. Prueba otra configuración.');
+      throw new Error('No he encontrado una combinación válida que cumpla el reparto de partidos, no repita compañeros y respete las reglas de género y BL activas. Prueba otra configuración.');
     }
   }
 
