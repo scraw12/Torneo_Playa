@@ -73,7 +73,7 @@ function generatePhase1() {
   const counts = {};
   players.forEach(p => counts[p]=0);
 
-  if (cfg.matchesPerPlayer === 4 && players.length >= 6 &&
+  if (cfg.matchesPerPlayer === 4 && players.length >= 28 &&
       blMap && players.filter(player => blMap.get(normalizePlayerKey_(player)) === true).length === 4) {
     // Para cuatro jugadores BL usamos una construcción específica que
     // reserva sus apariciones y distribuye los límites BL antes del resto.
