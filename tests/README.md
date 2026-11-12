@@ -13,7 +13,8 @@ Las pruebas actuales son unitarias y usan datos en memoria. No modifican hojas n
 - `000_Core.test.gs`: utilidades de configuración y lectura, pendiente de mocks de SpreadsheetApp.
 - `001_Utils.test.gs`: claves de parejas, lectura de marcadores y formato básico.
 - `003_Standings.test.gs`: posiciones manuales y comparación deportiva.
-- `005_Knockouts.test.gs`: parsing de nombres de equipos.
+- `004_FinalStage.test.gs`: transformación de clasificación pública y estado de empates.
+- `009_KnockoutManagement.test.gs`: parsing de nombres de equipos.
 - `012_TournamentRules.test.gs`: normalización de nombres/género y reglas.
 - `013_Phase1BLGenerator.test.gs`: generador y restricciones BL.
 
