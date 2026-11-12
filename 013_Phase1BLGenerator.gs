@@ -11,7 +11,7 @@ function generatePhase1ConstraintAware_(players, matchesPerPlayer, genderMap, ge
     const fastSchedule = generatePhase1TwelvePlayerRounds_(
       players, matchesPerPlayer, blMap
     );
-    if (fastSchedule) return fastSchedule;
+    return fastSchedule;
   }
   const startedAt = Date.now();
   const maxRuntimeMs = 55000;
@@ -227,8 +227,8 @@ function generatePhase1ConstraintAware_(players, matchesPerPlayer, genderMap, ge
  * exact appearances while checking partner/opponent BL counters independently.
  */
 function generatePhase1TwelvePlayerRounds_(players, rounds, blMap) {
-  const maxRoundCandidates = 1200;
-  const maxRuntimeMs = 45000;
+  const maxRoundCandidates = 10000;
+  const maxRuntimeMs = 52000;
   const startedAt = Date.now();
   const usedPairs = new Set();
   const partnerCounts = new Map();
