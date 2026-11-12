@@ -7,7 +7,7 @@ function generatePhase1ConstraintAware_(players, matchesPerPlayer, genderMap, ge
   const startedAt = Date.now();
   const maxRuntimeMs = 55000;
   const maxNodes = 1000000;
-  const poolLimit = Math.min(players.length, 9);
+  const poolLimit = Math.min(players.length, 12);
   const remaining = new Map(players.map(player => [player, matchesPerPlayer]));
   const usedPairs = new Set();
   const partnerCounts = new Map();
@@ -75,7 +75,45 @@ function generatePhase1ConstraintAware_(players, matchesPerPlayer, genderMap, ge
           for (let c = b + 1; c < pool.length; c++)
             triples.push([pool[a], pool[b], pool[c]]);
 
-      for (const triple of shuffle(triples)) {
+      // Prioriza tríos que ofrecen más opciones válidas y reservan los usos BL
+      // para jugadores que todavía no han consumido cada límite.
+      const tripleScore = triple => {
+        const chosen = [anchor].concat(triple);
+        const forms = [
+          [[chosen[0], chosen[1]], [chosen[2], chosen[3]]],
+          [[chosen[0], chosen[2]], [chosen[1], chosen[3]]],
+          [[chosen[0], chosen[3]], [chosen[1], chosen[2]]]
+        ];
+        let best = Infinity;
+        forms.forEach(match => {
+          const [teamA, teamB] = match;
+          if (!isPhase1GenderMatchValid_(teamA, teamB, genderMap, genderRules)) return;
+          const pairA = pairKey(teamA[0], teamA[1]);
+          const pairB = pairKey(teamB[0], teamB[1]);
+          if (usedPairs.has(pairA) || usedPairs.has(pairB)) return;
+          let score = 0;
+          [[teamA, teamB], [teamB, teamA]].forEach(([team, opponents]) => {
+            const opponentsHaveBL = opponents.some(hasBL);
+            team.forEach(player => {
+              if (hasBL(player)) return;
+              const teammate = team[0] === player ? team[1] : team[0];
+              if (hasBL(teammate)) score += 4 + 3 * (partnerCounts.get(player) || 0);
+              if (opponentsHaveBL) score += 4 + 3 * (opponentCounts.get(player) || 0);
+            });
+          });
+          if (rule3Enabled && teamA.every(isGirl) && teamB.every(isGirl)) {
+            score -= 20 * match.flat().filter(player =>
+              !girlsCoveredByRule3.has(normalizePlayerKey_(player))
+            ).length;
+          }
+          best = Math.min(best, score);
+        });
+        return best;
+      };
+      const shuffledTriples = shuffle(triples);
+      shuffledTriples.sort((a, b) => tripleScore(a) - tripleScore(b));
+
+      for (const triple of shuffledTriples) {
         const chosen = [anchor].concat(triple);
         const forms = shuffle([
           [[chosen[0], chosen[1]], [chosen[2], chosen[3]]],
@@ -83,18 +121,28 @@ function generatePhase1ConstraintAware_(players, matchesPerPlayer, genderMap, ge
           [[chosen[0], chosen[3]], [chosen[1], chosen[2]]]
         ]);
 
-        if (rule3Enabled) {
-          forms.sort((matchA, matchB) => {
-            const score = match => {
-              const allGirls = match[0].every(isGirl) && match[1].every(isGirl);
-              if (!allGirls) return 0;
-              return match[0].concat(match[1]).filter(player =>
+        forms.sort((matchA, matchB) => {
+          const score = match => {
+            let value = 0;
+            const [teamA, teamB] = match;
+            [[teamA, teamB], [teamB, teamA]].forEach(([team, opponents]) => {
+              const opponentsHaveBL = opponents.some(hasBL);
+              team.forEach(player => {
+                if (hasBL(player)) return;
+                const teammate = team[0] === player ? team[1] : team[0];
+                if (hasBL(teammate)) value += 4 + 3 * (partnerCounts.get(player) || 0);
+                if (opponentsHaveBL) value += 4 + 3 * (opponentCounts.get(player) || 0);
+              });
+            });
+            if (rule3Enabled && teamA.every(isGirl) && teamB.every(isGirl)) {
+              value -= 20 * teamA.concat(teamB).filter(player =>
                 !girlsCoveredByRule3.has(normalizePlayerKey_(player))
               ).length;
-            };
-            return score(matchB) - score(matchA);
-          });
-        }
+            }
+            return value;
+          };
+          return score(matchA) - score(matchB);
+        });
 
         for (const match of forms) {
           const [teamA, teamB] = match;
