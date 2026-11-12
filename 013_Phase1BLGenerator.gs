@@ -5,14 +5,21 @@
  */
 function generatePhase1ConstraintAware_(players, matchesPerPlayer, genderMap, genderRules, blMap) {
   const startedAt = Date.now();
-  const maxRuntimeMs = 40000;
-  const maxNodes = 90000;
+  const maxRuntimeMs = 55000;
+  const maxNodes = 140000;
   const poolLimit = Math.min(players.length, 9);
   const remaining = new Map(players.map(player => [player, matchesPerPlayer]));
   const usedPairs = new Set();
   const partnerCounts = new Map();
   const opponentCounts = new Map();
   const schedule = [];
+  const girlsCoveredByRule3 = new Set();
+  const rule3Enabled = !!(genderRules && genderRules.rule3);
+  const isGirl = player =>
+    genderMap && genderMap.get(normalizePlayerKey_(player)) === 'chica';
+  const uncoveredGirls = () => players.filter(player =>
+    isGirl(player) && !girlsCoveredByRule3.has(normalizePlayerKey_(player))
+  );
   let nodes = 0;
 
   const hasBL = player => blMap && blMap.get(normalizePlayerKey_(player)) === true;
@@ -31,16 +38,35 @@ function generatePhase1ConstraintAware_(players, matchesPerPlayer, genderMap, ge
         (!blMap || validatePhase1BLSchedule_(schedule, blMap).valid);
     }
     if (seats % 4 !== 0) return false;
+    // Rule 3 cannot be recovered once an uncovered girl has no appearances left.
+    if (rule3Enabled && uncoveredGirls().some(player => remaining.get(player) <= 0)) {
+      return false;
+    }
 
     const eligible = players.filter(player => remaining.get(player) > 0);
     if (eligible.length < 4) return false;
     const maxNeed = Math.max(...eligible.map(player => remaining.get(player)));
     const anchors = shuffle(eligible.filter(player => remaining.get(player) === maxNeed));
+    if (rule3Enabled) {
+      anchors.sort((a, b) =>
+        Number(isGirl(b) && !girlsCoveredByRule3.has(normalizePlayerKey_(b))) -
+        Number(isGirl(a) && !girlsCoveredByRule3.has(normalizePlayerKey_(a)))
+      );
+    }
 
     for (const anchor of anchors) {
-      const pool = shuffle(eligible.filter(player => player !== anchor)
-        .sort((a, b) => remaining.get(b) - remaining.get(a)))
-        .slice(0, poolLimit - 1);
+      // Keep all still-uncovered girls in the candidate pool whenever possible.
+      // Randomize equal-priority candidates, then apply deterministic priorities.
+      const pool = shuffle(eligible.filter(player => player !== anchor));
+      pool.sort((a, b) => {
+        if (rule3Enabled) {
+          const aNeeded = isGirl(a) && !girlsCoveredByRule3.has(normalizePlayerKey_(a));
+          const bNeeded = isGirl(b) && !girlsCoveredByRule3.has(normalizePlayerKey_(b));
+          if (aNeeded !== bNeeded) return bNeeded - aNeeded;
+        }
+        return remaining.get(b) - remaining.get(a);
+      });
+      pool.splice(poolLimit - 1);
       if (pool.length < 3) continue;
 
       const triples = [];
@@ -56,6 +82,19 @@ function generatePhase1ConstraintAware_(players, matchesPerPlayer, genderMap, ge
           [[chosen[0], chosen[2]], [chosen[1], chosen[3]]],
           [[chosen[0], chosen[3]], [chosen[1], chosen[2]]]
         ]);
+
+        if (rule3Enabled) {
+          forms.sort((matchA, matchB) => {
+            const score = match => {
+              const allGirls = match[0].every(isGirl) && match[1].every(isGirl);
+              if (!allGirls) return 0;
+              return match[0].concat(match[1]).filter(player =>
+                !girlsCoveredByRule3.has(normalizePlayerKey_(player))
+              ).length;
+            };
+            return score(matchB) - score(matchA);
+          });
+        }
 
         for (const match of forms) {
           const [teamA, teamB] = match;
@@ -87,11 +126,23 @@ function generatePhase1ConstraintAware_(players, matchesPerPlayer, genderMap, ge
           chosen.forEach(player => remaining.set(player, remaining.get(player) - 1));
           partnerAdds.forEach(player => partnerCounts.set(player, (partnerCounts.get(player) || 0) + 1));
           opponentAdds.forEach(player => opponentCounts.set(player, (opponentCounts.get(player) || 0) + 1));
+          const newlyCoveredGirls = [];
+          if (rule3Enabled && teamA.every(isGirl) && teamB.every(isGirl)) {
+            teamA.concat(teamB).forEach(player => {
+              const key = normalizePlayerKey_(player);
+              if (!girlsCoveredByRule3.has(key)) {
+                girlsCoveredByRule3.add(key);
+                newlyCoveredGirls.push(key);
+              }
+            });
+          }
           usedPairs.add(pairA); usedPairs.add(pairB); schedule.push(match);
 
           if (recurse()) return true;
 
-          schedule.pop(); usedPairs.delete(pairA); usedPairs.delete(pairB);
+          schedule.pop();
+          newlyCoveredGirls.forEach(key => girlsCoveredByRule3.delete(key));
+          usedPairs.delete(pairA); usedPairs.delete(pairB);
           partnerAdds.forEach(player => {
             const n = (partnerCounts.get(player) || 0) - 1;
             if (n) partnerCounts.set(player, n); else partnerCounts.delete(player);
