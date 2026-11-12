@@ -14,6 +14,8 @@ function test002Phase1Integration() {
     const rows = phaseSheet.getRange(2, 1, matchCount, 10).getValues();
     const appearances = {};
     players.forEach(player => appearances[player] = 0);
+    const expected = {};
+    players.forEach(player => expected[player] = { played: 0, wins: 0, difference: 0 });
     rows.forEach((row, index) => {
       phase1TestAssert_(row[5] === 'VS', 'La columna VS debe rellenarse en el partido ' + (index + 1) + '.');
       [row[3], row[4], row[6], row[7]].forEach(player => {
@@ -21,6 +23,8 @@ function test002Phase1Integration() {
         appearances[player]++;
       });
       phaseSheet.getRange(index + 2, 9, 1, 2).setValues([[21, 15]]);
+      [row[3], row[4]].forEach(player => { expected[player].played++; expected[player].wins++; expected[player].difference += 6; });
+      [row[6], row[7]].forEach(player => { expected[player].played++; expected[player].difference -= 6; });
     });
     players.forEach(player => {
       phase1TestAssert_(appearances[player] === 3, player + ' debe jugar exactamente 3 partidos.');
@@ -32,8 +36,8 @@ function test002Phase1Integration() {
     const standingsRows = standings.getRange(2, 1, players.length, 10).getValues();
     standingsRows.forEach(row => {
       phase1TestAssert_(row[2] === 3, row[1] + ' debe aparecer con 3 partidos jugados.');
-      phase1TestAssert_(row[3] === 3, row[1] + ' debe aparecer con 3 victorias.');
-      phase1TestAssert_(row[7] === 18, row[1] + ' debe tener +18 de diferencia.');
+      phase1TestAssert_(row[3] === expected[row[1]].wins, row[1] + ' debe tener las victorias calculadas desde los resultados.');
+      phase1TestAssert_(row[7] === expected[row[1]].difference, row[1] + ' debe tener la diferencia de puntos calculada.');
     });
     return { skipped: false, matches: matchCount, players: players.length, standingsRows: standingsRows.length };
   });
