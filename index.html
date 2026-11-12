@@ -93,6 +93,10 @@
         <input id="phase1Rule2" type="checkbox" style="margin-top:3px">
         <span><strong>Regla 2:</strong> una chica siempre debe enfrentarse al menos a otra chica. Una pareja de dos chicos no puede enfrentarse a un equipo que tenga chicas.</span>
       </label>
+      <label style="display:flex;gap:10px;align-items:flex-start;margin:10px 0">
+        <input id="phase1Rule3" type="checkbox" style="margin-top:3px">
+        <span><strong>Regla 3:</strong> cada chica debe jugar al menos un partido de chicas contra chicas (cuatro chicas en el mismo partido).</span>
+      </label>
       <div class="muted" id="phase1RulesStatus" style="margin:8px 0">Cargando reglas...</div>
       <button class="save" id="savePhase1RulesButton" onclick="savePhase1GenderRules()">Guardar reglas</button>
     </div>
@@ -277,9 +281,11 @@
     const rules = await callServer('adminGetPhase1GenderRules');
     document.getElementById('phase1Rule1').checked = !!rules.rule1;
     document.getElementById('phase1Rule2').checked = !!rules.rule2;
+    document.getElementById('phase1Rule3').checked = !!rules.rule3;
     document.getElementById('phase1RulesStatus').textContent =
       'Regla 1: ' + (rules.rule1 ? 'Activada' : 'Desactivada') +
-      ' · Regla 2: ' + (rules.rule2 ? 'Activada' : 'Desactivada');
+      ' · Regla 2: ' + (rules.rule2 ? 'Activada' : 'Desactivada') +
+      ' · Regla 3: ' + (rules.rule3 ? 'Activada' : 'Desactivada');
   }
 
   async function savePhase1GenderRules() {
@@ -287,16 +293,19 @@
     const button = document.getElementById('savePhase1RulesButton');
     const settings = {
       rule1: document.getElementById('phase1Rule1').checked,
-      rule2: document.getElementById('phase1Rule2').checked
+      rule2: document.getElementById('phase1Rule2').checked,
+      rule3: document.getElementById('phase1Rule3').checked
     };
     setButtonLoading(button, 'Guardando reglas...');
     try {
       const saved = await callServer('adminSavePhase1GenderRules', settings);
       document.getElementById('phase1Rule1').checked = !!saved.rule1;
       document.getElementById('phase1Rule2').checked = !!saved.rule2;
+      document.getElementById('phase1Rule3').checked = !!saved.rule3;
       document.getElementById('phase1RulesStatus').textContent =
         'Regla 1: ' + (saved.rule1 ? 'Activada' : 'Desactivada') +
-        ' · Regla 2: ' + (saved.rule2 ? 'Activada' : 'Desactivada');
+        ' · Regla 2: ' + (saved.rule2 ? 'Activada' : 'Desactivada') +
+        ' · Regla 3: ' + (saved.rule3 ? 'Activada' : 'Desactivada');
       showMessage('Reglas de Fase 1 guardadas.');
     } catch (e) {
       showMessage(e.message || String(e), true);
