@@ -59,26 +59,60 @@ function getPhase1GenderMap_(players) {
 }
 
 /**
- * Comprueba un enfrentamiento 2 contra 2 aplicando la Regla 1.
- * team1 y team2 son arrays de dos nombres.
+ * Lee las reglas independientes de Fase 1.
+ * Regla 1 se mantiene activada por defecto; Regla 2 empieza desactivada.
  */
-function isPhase1GenderMatchValid_(team1, team2, genderMap) {
+function getPhase1GenderRules_() {
+  const properties = PropertiesService.getScriptProperties();
+  const rule1Value = properties.getProperty('PHASE1_GENDER_RULE_1');
+  const rule2Value = properties.getProperty('PHASE1_GENDER_RULE_2');
+  return {
+    rule1: rule1Value === null ? true : rule1Value === 'true',
+    rule2: rule2Value === null ? false : rule2Value === 'true'
+  };
+}
+
+/** Guarda las dos reglas de forma independiente. */
+function savePhase1GenderRules_(settings) {
+  if (!settings || typeof settings.rule1 !== 'boolean' || typeof settings.rule2 !== 'boolean') {
+    throw new Error('La configuración de reglas no es válida.');
+  }
+  PropertiesService.getScriptProperties().setProperties({
+    PHASE1_GENDER_RULE_1: String(settings.rule1),
+    PHASE1_GENDER_RULE_2: String(settings.rule2)
+  });
+  return getPhase1GenderRules_();
+}
+
+/**
+ * Comprueba un enfrentamiento 2 contra 2 aplicando solo las reglas activas.
+ * Regla 1: una pareja de dos chicas solo se enfrenta a otra pareja de dos chicas.
+ * Regla 2: si un equipo tiene alguna chica, el equipo rival también debe tenerla.
+ */
+function isPhase1GenderMatchValid_(team1, team2, genderMap, rules) {
+  const activeRules = rules || getPhase1GenderRules_();
+  if (!activeRules.rule1 && !activeRules.rule2) return true;
+  const hasGirl = team => team.some(name =>
+    genderMap.get(normalizePlayerKey_(name)) === 'chica'
+  );
   const isAllGirls = team => team.every(name =>
     genderMap.get(normalizePlayerKey_(name)) === 'chica'
   );
-  const team1AllGirls = isAllGirls(team1);
-  const team2AllGirls = isAllGirls(team2);
-  return team1AllGirls === team2AllGirls;
+  // Regla 1: GG solo puede enfrentarse a GG.
+  if (activeRules.rule1 && isAllGirls(team1) !== isAllGirls(team2)) return false;
+  // Regla 2: ningún equipo con chicas puede enfrentarse a un equipo BB.
+  if (activeRules.rule2 && hasGirl(team1) !== hasGirl(team2)) return false;
+  return true;
 }
 
 /**
  * Valida todos los partidos de un calendario antes de guardarlo.
  * Se usa también como comprobación defensiva tras construir el calendario.
  */
-function validatePhase1GenderSchedule_(matches, genderMap) {
+function validatePhase1GenderSchedule_(matches, genderMap, rules) {
   for (let i = 0; i < matches.length; i++) {
     const match = matches[i];
-    if (!isPhase1GenderMatchValid_(match[0], match[1], genderMap)) {
+    if (!isPhase1GenderMatchValid_(match[0], match[1], genderMap, rules)) {
       return {
         valid: false,
         matchNumber: i + 1,
