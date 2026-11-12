@@ -61,8 +61,9 @@ function adminAddPhase1Player(playerData) {
     ? getPhase1GenderMap_(activePlayers)
     : new Map();
   if (newGender) genderMap.set(normalizePlayerKey_(name), newGender);
-  const blMap = getPhase1BLMap_(activePlayers);
-  blMap.set(normalizePlayerKey_(name), newBL);
+  const blRuleEnabled = getPhase1BLRule_();
+  const blMap = blRuleEnabled ? getPhase1BLMap_(activePlayers) : null;
+  if (blMap) blMap.set(normalizePlayerKey_(name), newBL);
   if (matchesPerPlayer % 4 !== 0) {
     throw new Error('La incorporación automática requiere que los partidos por jugador sean múltiplo de 4.');
   }
