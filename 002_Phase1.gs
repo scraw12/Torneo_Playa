@@ -73,9 +73,22 @@ function generatePhase1() {
   const counts = {};
   players.forEach(p => counts[p]=0);
 
-  if (cfg.matchesPerPlayer === 4 && players.length >= 6) {
-    // Construcción exacta para cuatro partidos por jugador, probando
-    // distintos órdenes hasta que todos los cruces cumplan las reglas activas.
+  if (cfg.matchesPerPlayer === 4 && players.length >= 6 &&
+      blMap && players.filter(player => blMap.get(normalizePlayerKey_(player)) === true).length === 4) {
+    // Para cuatro jugadores BL usamos una construcción específica que
+    // reserva sus apariciones y distribuye los límites BL antes del resto.
+    const blAwareSchedule = generatePhase1FourBLPlayers_(players, genderMap, genderRules, blMap);
+    if (!blAwareSchedule) {
+      throw new Error('No he encontrado un calendario válido para los cuatro jugadores BL con las reglas activas. No se ha modificado el calendario actual.');
+    }
+    schedule.push(...blAwareSchedule);
+    schedule.forEach(match => {
+      match.flat().forEach(player => counts[player]++);
+      usedPairs.add(pairKey(match[0][0], match[0][1]));
+      usedPairs.add(pairKey(match[1][0], match[1][1]));
+    });
+  } else if (cfg.matchesPerPlayer === 4 && players.length >= 6) {
+    // Construcción cíclica existente para el resto de configuraciones.
     let validSchedule = false;
     for (let attempt = 0; attempt < 5000 && !validSchedule; attempt++) {
       const orderedPlayers = shuffle(players);
