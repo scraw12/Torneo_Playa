@@ -5,11 +5,17 @@ Este documento sirve como contexto de trabajo para asistentes de IA que colabore
 ## Repositorio y flujo de ramas
 
 - Repositorio: `scraw12/Torneo_Playa`.
-- Rama de trabajo usada para los cambios de reglas de Fase 1: `ai-dev-phase1-add-player`.
-- El usuario indicó que primero integrará los cambios actuales en `dev` y comprobará que funcionan. **No modificar `dev` ni dar por hecha esa integración hasta que el usuario lo confirme.**
+- `main`: rama estable de producción. No se desarrolla directamente ni se actualiza sin autorización expresa del usuario.
+- `dev`: rama de integración y pruebas generales. Es siempre el punto de partida para nuevos trabajos.
+- `features`: rama temporal para implementar la funcionalidad en curso y sus pruebas unitarias. Se actualiza o recrea desde el `dev` vigente después de integrar el trabajo anterior, conservando primero cualquier trabajo sin terminar.
+- Flujo: `dev` → `features` (desarrollo y pruebas unitarias) → `dev` (integración, pruebas de regresión y validación en Apps Script de pruebas) → `main` (solo con autorización expresa y posterior despliegue de producción).
+- No sincronizar `features` ni `dev` directamente con Apps Script de producción.
 - Antes de cualquier edición en GitHub, recuperar el contenido actual y el SHA de cada archivo que se vaya a modificar. Actualizar los archivos de forma secuencial usando el SHA más reciente.
 - Mantener los cambios acotados a lo solicitado. No afirmar que se ha desplegado Apps Script ni que se ha probado contra la hoja real si no se ha hecho.
+- Distinguir entre cambios en GitHub, sincronización del código con Apps Script y despliegue de la Web App: son pasos diferentes.
+- La sincronización objetivo se realizará con `clasp` y/o GitHub Actions, manteniendo un proyecto Apps Script de pruebas separado del de producción.
 
+Documentación: `README.md`, `docs/APP_OVERVIEW.md` y `docs/DEVELOPMENT_WORKFLOW.md`.
 ## Contexto funcional
 
 Aplicación para organizar torneos mensuales de vóley playa 2 contra 2 mediante Google Sheets + Apps Script y una Web App. El número de participantes varía. La administración genera fases y registra resultados; la asignación de pistas se realiza manualmente.
