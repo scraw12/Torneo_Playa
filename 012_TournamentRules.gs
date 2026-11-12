@@ -248,6 +248,18 @@ function validatePhase1BLSchedule_(matches, blMap) {
   return { valid: true };
 }
 
+/** La regla BL está activada por defecto y se configura independientemente. */
+function getPhase1BLRule_() {
+  const value = PropertiesService.getScriptProperties().getProperty('PHASE1_BL_RULE');
+  return value === null ? true : value === 'true';
+}
+
+function savePhase1BLRule_(enabled) {
+  if (typeof enabled !== 'boolean') throw new Error('La configuración de la regla BL no es válida.');
+  PropertiesService.getScriptProperties().setProperty('PHASE1_BL_RULE', String(enabled));
+  return getPhase1BLRule_();
+}
+
 /** Normaliza la cabecera para localizar "Genero" aunque lleve tilde. */
 function normalizeGenderHeader_(value) {
   return String(value || '').trim().toLowerCase()
