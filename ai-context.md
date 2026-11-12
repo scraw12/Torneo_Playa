@@ -96,20 +96,32 @@ La acción está protegida con `requireAdmin()`.
 - La configuración de reglas se carga al entrar en Administración y se guarda mediante llamadas a Apps Script.
 - Todas las acciones administrativas del backend deben comprobar permisos con `requireAdmin()`.
 
-## Generador BL-aware de Fase 1
+## Generador general de Fase 1 con BL
 
-`002_Phase1.gs` selecciona el generador `generatePhase1FourBLPlayers_()` cuando se cumplen todas estas condiciones:
-- 4 partidos por jugador.
-- Al menos 28 jugadores activos.
-- Exactamente 4 jugadores con BL y la regla BL activada.
+`002_Phase1.gs` usa `generatePhase1ConstraintAware_()` de `013_Phase1BLGenerator.gs` siempre que la regla BL esté activada. No depende de una cantidad fija de jugadores BL ni de un único número de partidos.
 
-La implementación está en `013_Phase1BLGenerator.gs` y trabaja en dos etapas:
-1. **Esqueleto BL (10 partidos):** genera los seis emparejamientos posibles entre los cuatro jugadores BL (cada pareja BL juega junta una vez) y un partido adicional por jugador BL junto a un jugador sin BL. Los puestos restantes de esos partidos se asignan a jugadores sin BL distintos. Así cada jugador sin BL consume como máximo una vez el contador de compañero BL o el contador de rival BL; los contadores son independientes.
-2. **Completar calendario:** programa las apariciones restantes solo entre jugadores sin BL mediante búsqueda recursiva, evitando parejas de compañeros repetidas y aplicando las reglas de género por partido. Al terminar valida el calendario completo, incluida la regla de género 3 y ambos contadores BL.
+Condiciones:
+- El número de partidos por jugador debe estar entre 3 y 5.
+- Cualquier número de jugadores puede tener la marca BL.
+- Se mantiene el requisito de que el total de participaciones sea divisible entre cuatro.
+- Se mantienen todas las reglas de género activas, el reparto exacto y la prohibición de repetir compañeros.
 
-Límites internos actuales: hasta 500 intentos de esqueleto, 25 segundos de búsqueda total y 12.000 nodos de búsqueda residual por intento. Si no encuentra una solución dentro de esos límites, devuelve error; el calendario previo no se modifica.
+Durante la búsqueda se comprueban las restricciones BL por partido:
+- Un jugador sin BL puede tener como máximo una aparición con compañero BL.
+- Independientemente, un jugador sin BL puede tener como máximo una aparición frente a un equipo con al menos un BL.
+- Los jugadores BL no tienen esos límites.
 
-Para otras cantidades de jugadores BL, menos de 28 jugadores o configuraciones distintas de 4 partidos por jugador, se mantiene el generador anterior. La implementación nueva todavía **no está probada en Apps Script ni con los datos reales**. Hay que probar especialmente el caso observado de 29 jugadores, 4 partidos por jugador y 4 jugadores BL, con cada combinación de reglas de género que se utilice habitualmente.
+El solucionador utiliza backtracking con orden aleatorio, prioriza jugadores con más apariciones pendientes y mantiene un conjunto de parejas ya usadas. Tiene límites de ejecución de 40 segundos y 90.000 nodos. Si no encuentra solución dentro de esos límites, devuelve error y `generatePhase1()` no sustituye el calendario anterior. Un agotamiento del límite no demuestra imposibilidad matemática.
+
+La versión actual todavía necesita pruebas reales. Validar al menos:
+- 3, 4 y 5 partidos por jugador.
+- Ningún jugador BL, un BL, varios BL y una cantidad alta de BL.
+- Reglas de género 1, 2 y 3 en combinaciones representativas.
+- Reparto exacto, compañeros no repetidos y ambos contadores BL independientes.
+
+## Estado de pruebas
+
+La implementación generalizada se ha añadido a la rama `feature/phase1-bl-aware-generator`. No se ha ejecutado en Apps Script ni contra la hoja real; no marcarla como validada hasta realizar las pruebas anteriores.
 
 ## Archivos relevantes
 
