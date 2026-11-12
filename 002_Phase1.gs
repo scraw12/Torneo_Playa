@@ -71,7 +71,7 @@ function generatePhase1() {
 
   if (cfg.matchesPerPlayer === 4 && players.length >= 6) {
     // Construcción exacta para cuatro partidos por jugador, probando
-    // distintos órdenes hasta que todos los cruces cumplan la Regla 1.
+    // distintos órdenes hasta que todos los cruces cumplan las reglas activas.
     let validSchedule = false;
     for (let attempt = 0; attempt < 5000 && !validSchedule; attempt++) {
       const orderedPlayers = shuffle(players);
@@ -83,7 +83,7 @@ function generatePhase1() {
           [orderedPlayers[(i + 2) % n], orderedPlayers[(i + 4) % n]]
         ]);
       }
-      if (validatePhase1GenderSchedule_(candidate, genderMap).valid) {
+      if (validatePhase1GenderSchedule_(candidate, genderMap, genderRules).valid) {
         schedule.push(...candidate);
         validSchedule = true;
       }
@@ -125,7 +125,7 @@ function generatePhase1() {
             const key1 = pairKey(form[0][0], form[0][1]);
             const key2 = pairKey(form[1][0], form[1][1]);
             if (!usedPairs.has(key1) && !usedPairs.has(key2) &&
-                isPhase1GenderMatchValid_(form[0], form[1], genderMap)) {
+                isPhase1GenderMatchValid_(form[0], form[1], genderMap, genderRules)) {
               found = form;
               break;
             }
@@ -138,10 +138,10 @@ function generatePhase1() {
         schedule.push(found);
       }
       generated = ok && Object.values(counts).every(value => value === cfg.matchesPerPlayer) &&
-        validatePhase1GenderSchedule_(schedule, genderMap).valid;
+        validatePhase1GenderSchedule_(schedule, genderMap, genderRules).valid;
     }
     if (!generated) {
-      throw new Error('No he encontrado una combinación válida que cumpla el reparto de partidos, no repita compañeros y respete la regla de género. Prueba otra configuración.');
+      throw new Error('No he encontrado una combinación válida que cumpla el reparto de partidos, no repita compañeros y respete las reglas de género activas. Prueba otra configuración.');
     }
   }
 
