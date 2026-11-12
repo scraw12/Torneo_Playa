@@ -54,7 +54,7 @@ function generatePhase1() {
   const players = getPlayers();
   // Solo se exigen géneros completos cuando hay alguna regla activa.
   const genderRules = getPhase1GenderRules_();
-  const genderMap = (genderRules.rule1 || genderRules.rule2)
+  const genderMap = (genderRules.rule1 || genderRules.rule2 || genderRules.rule3)
     ? getPhase1GenderMap_(players)
     : new Map();
   if (players.length < 4) throw new Error('Se necesitan al menos 4 players.');
