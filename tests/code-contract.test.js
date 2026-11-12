@@ -37,7 +37,7 @@ function loadWebApp({ phase1Rows = [], knockoutRows = [], admin = false } = {}) 
   };
   const context = {
     SHEETS: { PHASE1: 'FASE1', KNOCKOUT: 'ELIMINATORIAS' },
-    SpreadsheetApp: { getActive: () => ({ getSheetByName: name => sheets[name] || null }) },
+    SpreadsheetApp: { getActive: () => ({ getSheetByName: name => sheets[name] || null }), flush() {} },
     updateStandings() { context.standingsUpdated = true; },
     propagateKnockoutWinner_(id, winner) { context.propagated = [id, winner]; },
     getPublicTournamentData() { return { refreshed: true }; },
@@ -98,4 +98,34 @@ test('assigning a PENDIENTE slot requires administrator permission', () => {
 test('public web interface does not render the PENDIENTE editor', () => {
   const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
   assert.match(html, /if \(!window\.IS_ADMIN\) return esc\(pair\);/);
+});
+
+test('public batch score saving updates multiple FASE1 matches', () => {
+  const { context, sheets } = loadWebApp({
+    phase1Rows: [
+      [1, '', 1, 'A', 'B', 'VS', 'C', 'D', '', ''],
+      [2, '', 1, 'E', 'F', 'VS', 'G', 'H', '', '']
+    ]
+  });
+  const result = context.savePublicScoreMultiple('FASE1', [
+    { id: '1', score1: 21, score2: 16 },
+    { id: '2', score1: 18, score2: 21 }
+  ]);
+  assert.equal(result.savedCount, 2);
+  assert.deepEqual(sheets.FASE1.rows.slice(1).map(row => row.slice(8, 10)), [[21, 16], [18, 21]]);
+  assert.equal(context.standingsUpdated, true);
+});
+
+test('batch knockout result rejects any PENDIENTE match before writing batch', () => {
+  const { context, sheets } = loadWebApp({
+    knockoutRows: [
+      ['ORO', 'Previa', 'ORO-R1-1', 'A / B', 'C / D', '', '', ''],
+      ['ORO', 'Previa', 'ORO-R1-2', 'E / PENDIENTE', 'G / H', '', '', '']
+    ]
+  });
+  assert.throws(() => context.savePublicScoreMultiple('KO', [
+    { id: 'ORO-R1-1', score1: 21, score2: 10 },
+    { id: 'ORO-R1-2', score1: 21, score2: 19 }
+  ]), /PENDIENTE/);
+  assert.equal(sheets.ELIMINATORIAS.rows[1][5], '');
 });
