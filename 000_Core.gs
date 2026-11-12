@@ -104,14 +104,20 @@ function setupTournament() {
  */
 function ensureRequiredHeaders_(sheet, requiredHeaders) {
   if (!sheet) throw new Error('No se encuentra la hoja para comprobar sus cabeceras.');
-  const lastColumn = Math.max(1, sheet.getLastColumn());
-  const currentHeaders = sheet.getRange(1, 1, 1, lastColumn).getValues()[0]
-    .map(value => String(value || '').trim());
-  const missing = requiredHeaders.filter(header => !currentHeaders.includes(header));
-  if (!missing.length) return [];
-  const startColumn = sheet.getLastColumn() + 1;
-  sheet.getRange(1, startColumn, 1, missing.length).setValues([missing]);
-  return missing;
+  const added = [];
+  requiredHeaders.forEach((header, index) => {
+    const targetColumn = index + 1;
+    const lastColumn = Math.max(targetColumn, sheet.getLastColumn());
+    const headers = sheet.getRange(1, 1, 1, lastColumn).getValues()[0]
+      .map(value => String(value || '').trim());
+    if (headers[targetColumn - 1] === header) return;
+    if (headers.includes(header)) return;
+    // Insert rather than overwrite: legacy columns and their data move intact.
+    sheet.insertColumnBefore(targetColumn);
+    sheet.getRange(1, targetColumn).setValue(header);
+    added.push(header);
+  });
+  return added;
 }
 
 function getConfig() {
