@@ -1,8 +1,9 @@
-/**
- * Core module integration tests are intentionally not run yet.
- * setupTournament/getConfig/getPlayers use SpreadsheetApp and must be tested
- * against a dedicated temporary spreadsheet, never the live tournament.
- */
-function test000CoreRequiresSpreadsheetFixture() {
-  return { skipped: true, reason: 'Requiere fixture aislado de SpreadsheetApp.' };
+/** Core fixture smoke test. */
+function test000CoreTemporaryFixture() {
+  return withTemporaryTournamentSheets_(function () {
+    const players = createPhase1IntegrationPlayers_();
+    phase1TestAssert_(getPlayers().length === players.length, 'getPlayers debe leer la fixture temporal.');
+    phase1TestAssert_(getConfig().matchesPerPlayer === 3, 'getConfig debe leer la configuración temporal.');
+    return { skipped: false, players: players.length };
+  });
 }
