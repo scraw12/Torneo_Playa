@@ -113,6 +113,7 @@ function savePublicResult(matchType, matchId, score1, score2) {
  * This is intentionally public so the tournament can be completed from the web.
  */
 function savePendingPlayer(matchId, side, playerName) {
+  requireAdmin();
   const id = String(matchId || '').trim();
   const slot = Number(side);
   const name = String(playerName || '').trim();

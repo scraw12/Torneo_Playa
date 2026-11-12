@@ -531,6 +531,7 @@
 
   function pendingPlayerEditor(matchId, side, pairValue) {
     const pair = String(pairValue || '');
+    if (!window.IS_ADMIN) return esc(pair);
     if (!pair.includes('PENDIENTE')) return esc(pair);
     const inputId = 'KO_PENDING_' + matchId + '_' + side;
     return `<div>${esc(pair)}</div>
