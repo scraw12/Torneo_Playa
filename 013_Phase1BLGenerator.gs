@@ -6,7 +6,7 @@
 function generatePhase1ConstraintAware_(players, matchesPerPlayer, genderMap, genderRules, blMap) {
   const startedAt = Date.now();
   const maxRuntimeMs = 55000;
-  const maxNodes = 140000;
+  const maxNodes = 1000000;
   const poolLimit = Math.min(players.length, 9);
   const remaining = new Map(players.map(player => [player, matchesPerPlayer]));
   const usedPairs = new Set();
