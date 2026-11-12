@@ -103,9 +103,17 @@ La regla BL es independiente de las reglas de género y está **activada por def
 
 ## Administración y seguridad
 
+- La vista pública se mantiene disponible sin inicio de sesión.
+- La ruta de administración se abre con `?admin=1` y solicita usuario y contraseña.
+- Las cuentas se crean individualmente desde el editor de la hoja: primero ejecuta `configureAdministrator()` una vez desde el editor de Apps Script con la cuenta propietaria; después utiliza el menú **🏐 TORNEO → Usuarios de administración**.
+- Cada cuenta requiere un usuario único y una contraseña de al menos 12 caracteres. Las contraseñas no se guardan en texto plano: se almacena un hash PBKDF2-HMAC-SHA256 con sal individual.
+- Las sesiones se guardan en caché del servidor, duran hasta 6 horas de inactividad y se pueden cerrar desde la Web App. Se limita el acceso tras cinco intentos fallidos durante 15 minutos.
+- Desde el gestor del propietario se pueden crear y eliminar cuentas. Al eliminar una cuenta, sus sesiones dejan de ser válidas en la siguiente petición.
+- Las acciones administrativas web reciben un token de sesión y validan `requireAdmin(sessionToken)`. Las funciones internas del torneo terminan en guion bajo y no se exponen a `google.script.run`.
+- Las funciones de menú de la hoja requieren la cuenta propietaria configurada. La edición pública de resultados individuales y múltiples se conserva como funcionalidad pública actual.
 - Las reglas de género y BL se guardan en las propiedades del proyecto de Apps Script.
-- Las acciones administrativas del backend deben comprobar permisos mediante `requireAdmin()`.
-- Ejecuta `configureAdministrator()` desde el editor de Apps Script con la cuenta que deba ser administradora.
+
+**Puesta en marcha de la autenticación:** ejecuta `configureAdministrator()` desde el editor una sola vez, crea los usuarios desde el menú y vuelve a desplegar la Web App para que use el código actualizado. No compartas las contraseñas por el propio repositorio.
 
 ## Limitaciones conocidas
 
