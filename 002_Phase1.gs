@@ -92,7 +92,7 @@ function generatePhase1() {
       }
     }
     if (!validSchedule) {
-      throw new Error('No he encontrado un calendario que cumpla la regla de género manteniendo cuatro partidos por jugador y sin repetir compañeros. Revisa la distribución de jugadores o prueba otra configuración.');
+      throw new Error('No he encontrado un calendario que cumpla las reglas de género activas manteniendo cuatro partidos por jugador y sin repetir compañeros. Revisa la distribución de jugadores o prueba otra configuración.');
     }
     schedule.forEach(match => {
       match.flat().forEach(player => counts[player]++);
