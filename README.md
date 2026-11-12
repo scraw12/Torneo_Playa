@@ -55,11 +55,18 @@ La administración puede añadir un participante después de generar el calendar
 - Ejecuta `configureAdministrator()` desde el editor de Apps Script con la cuenta que deba ser administradora.
 - La configuración BL no sustituye las reglas de género: ambas se evalúan por separado cuando están activadas.
 
-## Limitaciones conocidas / trabajo pendiente
+## Generación de Fase 1 con reglas BL
 
-Para la configuración de **4 partidos por jugador**, se mantiene la construcción cíclica existente salvo en el caso de 28 o más jugadores y exactamente 4 jugadores con BL. En ese escenario se utiliza `013_Phase1BLGenerator.gs`: primero construye una estructura de diez partidos que distribuye las apariciones BL (cada jugador BL comparte equipo una vez con cada uno de los otros tres jugadores BL y una vez con un jugador sin BL), y después intenta completar las apariciones restantes exclusivamente entre jugadores sin BL.
+La generación admite entre **3 y 5 partidos por jugador** y cualquier cantidad de jugadores marcados con BL. Cuando la regla BL está activada, `002_Phase1.gs` utiliza el solucionador general `generatePhase1ConstraintAware_()` de `013_Phase1BLGenerator.gs`.
 
-El generador nuevo respeta los dos contadores BL independientes, evita repetir compañeros y comprueba las reglas de género antes de aceptar el calendario. Si no encuentra solución dentro de sus límites de búsqueda, devuelve un error y conserva el calendario anterior. Esta implementación está pendiente de pruebas en Apps Script y con los datos reales del torneo; no se considera validada hasta completar esas pruebas.
+El algoritmo construye el calendario comprobando en cada partido:
+- Reparto de apariciones pendientes, hasta alcanzar exactamente el número configurado para cada jugador.
+- Ninguna pareja de compañeros repetida.
+- Para cada jugador sin BL, como máximo un partido con compañero BL.
+- Para cada jugador sin BL, como máximo un partido contra un equipo que contenga BL. Este contador es independiente del anterior.
+- Reglas de género activas; la regla de género 3 se valida sobre el calendario completo.
+
+El generador utiliza búsqueda con retroceso y límites de tiempo/nodos para evitar ejecuciones indefinidas. Si agota esos límites sin encontrar calendario, informa del fallo y conserva el calendario anterior. Por tanto, un fallo de búsqueda no demuestra por sí solo que el calendario sea matemáticamente imposible. La implementación debe probarse con diferentes tamaños de torneo, cantidades BL y configuraciones de género antes de considerarse validada.
 
 ## Despliegue y pruebas
 
