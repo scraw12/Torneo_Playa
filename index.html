@@ -709,6 +709,7 @@
       document.getElementById('adminLogin').style.display = 'none';
       document.getElementById('nav').style.display = '';
       if (!tabs.some(tab => tab[0] === 'admin')) tabs.push(['admin','⚙️ Administración']);
+      renderNav();
       await loadAdminData();
     } catch (e) {
       error.textContent = e.message || String(e);
@@ -727,6 +728,8 @@
   }
 
   async function loadAdminData() {
+    if (!tabs.some(tab => tab[0] === 'admin')) tabs.push(['admin','⚙️ Administración']);
+    renderNav();
     DATA = await callAdminServer('adminGetKnockoutManagementData');
     render();
     activate('admin');
@@ -745,6 +748,7 @@
           if (status && status.valid) {
             ADMIN_TOKEN = storedToken;
             window.IS_ADMIN = true;
+            if (!tabs.some(tab => tab[0] === 'admin')) tabs.push(['admin','⚙️ Administración']);
           } else {
             sessionStorage.removeItem('tournamentAdminToken');
           }
