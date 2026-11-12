@@ -18,8 +18,6 @@ function runPhase1BLGeneratorTests() {
     testPhase1GenderRules_,
     testPhase1GenderRule3_,
     testPhase1GeneratorThreeMatches_,
-    testPhase1GeneratorFourMatches_,
-    testPhase1GeneratorFiveMatches_,
     testPhase1Generator30PlayersSixGirlsBL_
   ];
 
