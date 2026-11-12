@@ -73,15 +73,16 @@ function generatePhase1() {
   const counts = {};
   players.forEach(p => counts[p]=0);
 
-  if (cfg.matchesPerPlayer === 4 && players.length >= 28 &&
-      blMap && players.filter(player => blMap.get(normalizePlayerKey_(player)) === true).length === 4) {
-    // Para cuatro jugadores BL usamos una construcción específica que
-    // reserva sus apariciones y distribuye los límites BL antes del resto.
-    const blAwareSchedule = generatePhase1FourBLPlayers_(players, genderMap, genderRules, blMap);
-    if (!blAwareSchedule) {
-      throw new Error('No he encontrado un calendario válido para los cuatro jugadores BL con las reglas activas. No se ha modificado el calendario actual.');
+  if (blMap && cfg.matchesPerPlayer >= 3 && cfg.matchesPerPlayer <= 5) {
+    // Generador con restricciones integradas: cualquier cantidad de jugadores
+    // BL y entre 3 y 5 partidos por jugador.
+    const constraintAwareSchedule = generatePhase1ConstraintAware_(
+      players, cfg.matchesPerPlayer, genderMap, genderRules, blMap
+    );
+    if (!constraintAwareSchedule) {
+      throw new Error('No he encontrado un calendario que cumpla las reglas activas de género y BL, el reparto exacto de partidos y la prohibición de repetir compañeros. El calendario actual no se ha modificado.');
     }
-    schedule.push(...blAwareSchedule);
+    schedule.push(...constraintAwareSchedule);
     schedule.forEach(match => {
       match.flat().forEach(player => counts[player]++);
       usedPairs.add(pairKey(match[0][0], match[0][1]));
