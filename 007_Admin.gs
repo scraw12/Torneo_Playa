@@ -325,3 +325,45 @@ function adminSavePhase1BLRule(sessionToken, enabled) {
   requireAdmin(sessionToken);
   return savePhase1BLRule_(enabled);
 }
+
+
+/**
+ * Spreadsheet menu handlers. They are intentionally owner-only; the Web App
+ * uses the session-protected adminGenerate*/adminUpdate* endpoints above.
+ */
+function generatePhase1() {
+  requireEditorOwner_();
+  generatePhase1_();
+}
+function updateStandings() {
+  requireEditorOwner_();
+  updateStandings_();
+}
+function generateGoldSilver() {
+  requireEditorOwner_();
+  generateGoldSilver_();
+}
+function generateKnockout() {
+  requireEditorOwner_();
+  generateKnockout_();
+}
+function finishTournament() {
+  requireEditorOwner_();
+  finishTournament_();
+}
+function newTournament() {
+  requireEditorOwner_();
+  const ui = SpreadsheetApp.getUi();
+  const answer = ui.alert('Nuevo torneo', '¿Seguro que quieres borrar los datos del torneo actual? El histórico NO se borrará.', ui.ButtonSet.YES_NO);
+  if (answer !== ui.Button.YES) return;
+  const ss = SpreadsheetApp.getActive();
+  [SHEETS.PHASE1, SHEETS.STANDINGS, SHEETS.FINAL_PAIRS, SHEETS.KNOCKOUT].forEach(name => {
+    const sheet = ss.getSheetByName(name);
+    if (sheet && sheet.getLastRow() > 1) {
+      sheet.getRange(2, 1, sheet.getLastRow() - 1, sheet.getLastColumn()).clearContent();
+    }
+  });
+  const panel = ss.getSheetByName(SHEETS.PANEL);
+  if (panel) panel.getRange('B3:B8').setValue(false);
+  ui.alert('Torneo actual limpio. El histórico se mantiene.');
+}
