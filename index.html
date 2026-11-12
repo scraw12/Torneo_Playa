@@ -101,6 +101,16 @@
       <button class="save" id="savePhase1RulesButton" onclick="savePhase1GenderRules()">Guardar reglas</button>
     </div>
     <div class="card" style="margin-bottom:14px">
+      <h3>Regla BL · Fase 1</h3>
+      <div class="muted" style="margin-bottom:12px">Si está activada, cada jugador sin BL puede jugar como máximo un partido con un compañero BL y, de forma independiente, como máximo un partido contra un equipo que tenga algún jugador BL. Los jugadores con BL no tienen estas limitaciones. Se aplica al generar la Fase 1 y al incorporar jugadores.</div>
+      <label style="display:flex;gap:10px;align-items:flex-start;margin:10px 0">
+        <input id="phase1BLRule" type="checkbox" style="margin-top:3px">
+        <span><strong>Aplicar restricciones BL</strong></span>
+      </label>
+      <div class="muted" id="phase1BLRuleStatus" style="margin:8px 0">Cargando regla BL...</div>
+      <button class="save" id="savePhase1BLRuleButton" onclick="savePhase1BLRule()">Guardar regla BL</button>
+    </div>
+    <div class="card" style="margin-bottom:14px">
       <h3>Incorporar jugador a Fase 1</h3>
       <div class="muted" style="margin-bottom:10px">Añade un participante después de generar los partidos. Se redistribuirán los partidos necesarios para mantener el mismo número de encuentros por jugador. Solo se permite antes de introducir resultados.</div>
       <div id="phase1PlayerCounts" class="muted" style="margin-bottom:10px">Todavía no hay partidos generados.</div>
@@ -290,6 +300,31 @@
       'Regla 1: ' + (rules.rule1 ? 'Activada' : 'Desactivada') +
       ' · Regla 2: ' + (rules.rule2 ? 'Activada' : 'Desactivada') +
       ' · Regla 3: ' + (rules.rule3 ? 'Activada' : 'Desactivada');
+  }
+
+  async function loadPhase1BLRule() {
+    const enabled = await callServer('adminGetPhase1BLRule');
+    document.getElementById('phase1BLRule').checked = !!enabled;
+    document.getElementById('phase1BLRuleStatus').textContent =
+      'Regla BL: ' + (enabled ? 'Activada' : 'Desactivada');
+  }
+
+  async function savePhase1BLRule() {
+    if (!window.IS_ADMIN) { showMessage('No tienes permisos de administrador.', true); return; }
+    const button = document.getElementById('savePhase1BLRuleButton');
+    const enabled = document.getElementById('phase1BLRule').checked;
+    setButtonLoading(button, 'Guardando regla BL...');
+    try {
+      const saved = await callServer('adminSavePhase1BLRule', enabled);
+      document.getElementById('phase1BLRule').checked = !!saved;
+      document.getElementById('phase1BLRuleStatus').textContent =
+        'Regla BL: ' + (saved ? 'Activada' : 'Desactivada');
+      showMessage('Regla BL guardada.');
+    } catch (e) {
+      showMessage(e.message || String(e), true);
+    } finally {
+      clearButtonLoading(button);
+    }
   }
 
   async function savePhase1GenderRules() {
@@ -634,6 +669,7 @@
         const status=await callServer('getAdminStatus');
         document.getElementById('adminStatus').textContent='Administrador identificado: '+status.email;
         await loadPhase1GenderRules();
+    await loadPhase1BLRule();
       }
     } catch(e){ document.getElementById('loading').textContent='No se ha podido cargar el torneo: '+(e.message||e); }
   }
