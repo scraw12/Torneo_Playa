@@ -18,6 +18,9 @@ function runPhase1BLGeneratorTests() {
     testPhase1GenderRules_,
     testPhase1GenderRule3_,
     testPhase1GeneratorThreeMatches_,
+    testPhase1TournamentProfiles_,
+    testPhase1ProfileRejectsExcessBL_,
+    testPhase1ProfileRejectsWrongMatchCount_,
     testPhase1Generator30PlayersSixGirlsBL_
   ];
 
@@ -160,6 +163,59 @@ function testPhase1GenderRule3_() {
     'La validación debe identificar las chicas que no han jugado GG contra GG.');
 }
 
+
+
+/** Realistic tournament profiles: BL caps and matches/player by group size. */
+function testPhase1TournamentProfiles_() {
+  [
+    { players: 24, bl: 4, matches: 4 },
+    { players: 29, bl: 4, matches: 4 },
+    { players: 30, bl: 5, matches: 4 },
+    { players: 35, bl: 5, matches: 4 },
+    { players: 36, bl: 6, matches: 3 },
+    { players: 40, bl: 6, matches: 3 }
+  ].forEach(scenario => {
+    const blMap = new Map();
+    for (let i = 1; i <= scenario.players; i++) {
+      blMap.set('p' + i, i <= scenario.bl);
+    }
+    const result = validatePhase1TournamentProfile_(
+      scenario.players, scenario.matches, blMap
+    );
+    phase1TestAssert_(result.valid,
+      'Perfil rechazado incorrectamente: ' + JSON.stringify(scenario));
+  });
+  // Fuera de los tramos definidos no se impone un rango de jugadores.
+  phase1TestAssert_(
+    validatePhase1TournamentProfile_(23, 5, new Map()).valid &&
+    validatePhase1TournamentProfile_(41, 5, new Map()).valid,
+    'No debe imponerse un rango obligatorio de jugadores.'
+  );
+}
+
+function testPhase1ProfileRejectsExcessBL_() {
+  const blMap = new Map();
+  for (let i = 1; i <= 30; i++) blMap.set('p' + i, i <= 6);
+  let message = '';
+  try {
+    validatePhase1TournamentProfile_(30, 4, blMap);
+  } catch (error) {
+    message = String(error.message || error);
+  }
+  phase1TestAssert_(message.indexOf('BL_COUNT_EXCEEDED:') === 0,
+    'Debe devolver BL_COUNT_EXCEEDED al superar el máximo de BL.');
+}
+
+function testPhase1ProfileRejectsWrongMatchCount_() {
+  let message = '';
+  try {
+    validatePhase1TournamentProfile_(36, 4, new Map());
+  } catch (error) {
+    message = String(error.message || error);
+  }
+  phase1TestAssert_(message.indexOf('MATCH_COUNT_NOT_ALLOWED:') === 0,
+    'Debe devolver MATCH_COUNT_NOT_ALLOWED si no son 3 partidos en 36-40 jugadores.');
+}
 
 /** Exact regression scenario: 30 players, 4 matches, 6 girls (2 BL), 3 BL total. */
 function testPhase1Generator30PlayersSixGirlsBL_() {
