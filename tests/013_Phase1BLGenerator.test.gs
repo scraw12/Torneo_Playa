@@ -20,6 +20,7 @@ function runPhase1BLGeneratorTests() {
     testPhase1TournamentProfiles_,
     testPhase1ProfileRejectsExcessBL_,
     testPhase1ProfileRejectsWrongMatchCount_,
+    testPhase1Generator30PlayersSixGirlsBL_,
     testPhase1Generator36PlayersThreeMatches_
   ];
 
