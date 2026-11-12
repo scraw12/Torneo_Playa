@@ -15,7 +15,7 @@ function doGet(e) {
   template.adminRequested = isAdminRequest;
 
   return template.evaluate()
-    .setTitle(adminAllowed ? 'Administración · Torneo Vóley Playa' : 'Torneo Vóley Playa')
+    .setTitle(isAdminRequest ? 'Administración · Torneo Vóley Playa' : 'Torneo Vóley Playa')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
 
