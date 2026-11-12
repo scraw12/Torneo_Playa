@@ -165,9 +165,11 @@ function adminAddPhase1Player(playerData) {
   let addedPlayerRow = null;
   let reactivated = false;
   let previousActiveValue = null;
+  let previousBLValue = null;
   if (existingPlayerRow >= 0) {
     addedPlayerRow = existingPlayerRow + 2;
     previousActiveValue = playerRows[existingPlayerRow][1];
+    previousBLValue = playerRows[existingPlayerRow][blColumn];
     playersSheet.getRange(addedPlayerRow, 2).setValue(true);
     const headers = playersSheet.getRange(1, 1, 1, playerWidth).getValues()[0];
     const genderColumn = headers.findIndex(value => normalizeGenderHeader_(value) === 'genero');
@@ -204,6 +206,7 @@ function adminAddPhase1Player(playerData) {
     }
     if (reactivated) {
       playersSheet.getRange(addedPlayerRow, 2).setValue(previousActiveValue);
+      playersSheet.getRange(addedPlayerRow, blColumn + 1).setValue(previousBLValue);
     } else {
       playersSheet.deleteRow(addedPlayerRow);
     }
