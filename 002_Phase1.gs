@@ -70,37 +70,44 @@ function generatePhase1() {
   players.forEach(p => counts[p]=0);
 
   if (cfg.matchesPerPlayer === 4 && players.length >= 6) {
-    // Exact construction for four matches per player.
-    // Every player gets four different teammates, with no repeated pair.
-    // This avoids the random greedy search getting stuck on odd-sized groups
-    // such as 29 players, even though a valid schedule exists.
-    const orderedPlayers = shuffle(players);
-    const n = orderedPlayers.length;
-
-    for (let i = 0; i < n; i++) {
-      schedule.push([
-        [orderedPlayers[i], orderedPlayers[(i + 1) % n]],
-        [orderedPlayers[(i + 2) % n], orderedPlayers[(i + 4) % n]]
-      ]);
+    // Construcción exacta para cuatro partidos por jugador, probando
+    // distintos órdenes hasta que todos los cruces cumplan la Regla 1.
+    let validSchedule = false;
+    for (let attempt = 0; attempt < 5000 && !validSchedule; attempt++) {
+      const orderedPlayers = shuffle(players);
+      const candidate = [];
+      const n = orderedPlayers.length;
+      for (let i = 0; i < n; i++) {
+        candidate.push([
+          [orderedPlayers[i], orderedPlayers[(i + 1) % n]],
+          [orderedPlayers[(i + 2) % n], orderedPlayers[(i + 4) % n]]
+        ]);
+      }
+      if (validatePhase1GenderSchedule_(candidate, genderMap).valid) {
+        schedule.push(...candidate);
+        validSchedule = true;
+      }
     }
-
+    if (!validSchedule) {
+      throw new Error('No he encontrado un calendario que cumpla la regla de género manteniendo cuatro partidos por jugador y sin repetir compañeros. Revisa la distribución de jugadores o prueba otra configuración.');
+    }
     schedule.forEach(match => {
       match.flat().forEach(player => counts[player]++);
       usedPairs.add(pairKey(match[0][0], match[0][1]));
       usedPairs.add(pairKey(match[1][0], match[1][1]));
     });
   } else {
-    // Randomized construction retained for all other configurations.
-    for (let attempt = 0; attempt < 1000; attempt++) {
+    // Construcción aleatoria para el resto de configuraciones.
+    let generated = false;
+    for (let attempt = 0; attempt < 1000 && !generated; attempt++) {
       usedPairs.clear();
       schedule.length = 0;
-      players.forEach(p => counts[p] = 0);
+      players.forEach(player => counts[player] = 0);
       let ok = true;
 
       for (let m = 0; m < totalMatches; m++) {
-        const eligible = shuffle(players.filter(p => counts[p] < cfg.matchesPerPlayer));
+        const eligible = shuffle(players.filter(player => counts[player] < cfg.matchesPerPlayer));
         if (eligible.length < 4) { ok = false; break; }
-
         eligible.sort((a, b) => counts[a] - counts[b] || Math.random() - 0.5);
 
         let found = null;
@@ -117,24 +124,24 @@ function generatePhase1() {
           for (const form of forms) {
             const key1 = pairKey(form[0][0], form[0][1]);
             const key2 = pairKey(form[1][0], form[1][1]);
-            if (!usedPairs.has(key1) && !usedPairs.has(key2)) {
+            if (!usedPairs.has(key1) && !usedPairs.has(key2) &&
+                isPhase1GenderMatchValid_(form[0], form[1], genderMap)) {
               found = form;
               break;
             }
           }
         }
-
         if (!found) { ok = false; break; }
         found.flat().forEach(player => counts[player]++);
         usedPairs.add(pairKey(found[0][0], found[0][1]));
         usedPairs.add(pairKey(found[1][0], found[1][1]));
         schedule.push(found);
       }
-
-      if (ok && Object.values(counts).every(value => value === cfg.matchesPerPlayer)) break;
-      if (attempt === 999) {
-        throw new Error('No he encontrado una combinación válida. Prueba con otro número de matches por player o de participantes.');
-      }
+      generated = ok && Object.values(counts).every(value => value === cfg.matchesPerPlayer) &&
+        validatePhase1GenderSchedule_(schedule, genderMap).valid;
+    }
+    if (!generated) {
+      throw new Error('No he encontrado una combinación válida que cumpla el reparto de partidos, no repita compañeros y respete la regla de género. Prueba otra configuración.');
     }
   }
 
