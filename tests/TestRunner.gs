@@ -7,6 +7,7 @@ function runAllModuleTests() {
   const suites = [
     { name: '001 Utils', run: test001Utils },
     { name: '003 Standings', run: test003Standings },
+    { name: '004 Final stage', run: test004FinalStage },
     { name: '009 Knockout management', run: test009KnockoutManagement },
     { name: '012 Tournament rules', run: test012TournamentRules },
     { name: '013 Phase 1 BL generator', run: runPhase1BLGeneratorTests },
