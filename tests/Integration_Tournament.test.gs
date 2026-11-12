@@ -3,13 +3,13 @@ function test002Phase1Integration() {
   return withTemporaryTournamentSheets_(function () {
     const players = createPhase1IntegrationPlayers_();
     const config = getConfig();
-    phase1TestAssert_(config.matchesPerPlayer === 3, 'Debe leer 3 partidos por jugador desde CONFIG.');
+    phase1TestAssert_(config.matchesPerPlayer === 4, 'Debe leer 4 partidos por jugador desde CONFIG.');
 
     generatePhase1();
 
     const phaseSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEETS.PHASE1);
     const matchCount = phaseSheet.getLastRow() - 1;
-    phase1TestAssert_(matchCount === 6, '8 jugadores x 3 partidos deben generar 6 partidos.');
+    phase1TestAssert_(matchCount === 24, '24 jugadores x 4 partidos deben generar 24 partidos.');
 
     const rows = phaseSheet.getRange(2, 1, matchCount, 10).getValues();
     const appearances = {};
@@ -27,15 +27,15 @@ function test002Phase1Integration() {
       [row[6], row[7]].forEach(player => { expected[player].played++; expected[player].difference -= 6; });
     });
     players.forEach(player => {
-      phase1TestAssert_(appearances[player] === 3, player + ' debe jugar exactamente 3 partidos.');
+      phase1TestAssert_(appearances[player] === 4, player + ' debe jugar exactamente 4 partidos.');
     });
 
     updateStandings();
     const standings = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEETS.STANDINGS);
-    phase1TestAssert_(standings.getLastRow() === players.length + 1, 'La clasificación debe incluir a los 8 jugadores.');
+    phase1TestAssert_(standings.getLastRow() === players.length + 1, 'La clasificación debe incluir a los 24 jugadores.');
     const standingsRows = standings.getRange(2, 1, players.length, 10).getValues();
     standingsRows.forEach(row => {
-      phase1TestAssert_(row[2] === 3, row[1] + ' debe aparecer con 3 partidos jugados.');
+      phase1TestAssert_(row[2] === 4, row[1] + ' debe aparecer con 4 partidos jugados.');
       phase1TestAssert_(row[3] === expected[row[1]].wins, row[1] + ' debe tener las victorias calculadas desde los resultados.');
       phase1TestAssert_(row[7] === expected[row[1]].difference, row[1] + ' debe tener la diferencia de puntos calculada.');
     });
