@@ -21,7 +21,7 @@ const SHEETS = {
 function onOpen() {
   SpreadsheetApp.getUi()
     .createMenu('🏐 TORNEO')
-    .addItem('⚙️ Preparar / actualizar estructura', 'setupTournament')
+    .addItem('⚙️ Preparar / actualizar estructura', 'setupTournament_')
     .addSeparator()
     .addItem('🎲 Generar Fase 1', 'generatePhase1')
     .addItem('📊 Actualizar clasificación', 'updateStandings')
@@ -29,11 +29,12 @@ function onOpen() {
     .addItem('⚔️ Generar eliminatorias', 'generateKnockout')
     .addSeparator()
     .addItem('💾 Finalizar tournament y actualizar histórico', 'finishTournament')
-    .addItem('🧹 Nuevo tournament', 'newTournament')
+    .addItem('👥 Usuarios de administración', 'openAdminUserSetup')
+    .addItem('🧹 Nuevo tournament', 'newTournament_')
     .addToUi();
 }
 
-function setupTournament() {
+function setupTournament_() {
   const ss = SpreadsheetApp.getActive();
   const defs = {
     PANEL: [['PANEL DE CONTROL',''],['Acción','Activar'],['Generar Fase 1',''],['Actualizar clasificación',''],['Generar Oro / Plata',''],['Generar eliminatorias',''],['Finalizar tournament',''],['Nuevo tournament','']],
