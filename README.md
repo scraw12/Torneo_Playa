@@ -57,9 +57,9 @@ La administración puede añadir un participante después de generar el calendar
 
 ## Limitaciones conocidas / trabajo pendiente
 
-Para la configuración de **4 partidos por jugador**, la generación actual utiliza una construcción cíclica y prueba hasta 5.000 órdenes aleatorios de jugadores. Si no encuentra una combinación que cumpla todas las reglas activas, muestra un error. Esto no demuestra que matemáticamente no exista un calendario válido: el algoritmo explora una familia limitada de calendarios.
+Para la configuración de **4 partidos por jugador**, se mantiene la construcción cíclica existente salvo en el caso de 28 o más jugadores y exactamente 4 jugadores con BL. En ese escenario se utiliza `013_Phase1BLGenerator.gs`: primero construye una estructura de diez partidos que distribuye las apariciones BL (cada jugador BL comparte equipo una vez con cada uno de los otros tres jugadores BL y una vez con un jugador sin BL), y después intenta completar las apariciones restantes exclusivamente entre jugadores sin BL.
 
-Se ha identificado que esta búsqueda puede no encontrar calendario cuando la regla BL está activada, incluso con pocos jugadores marcados con BL. Está pendiente mejorar el algoritmo para construir la distribución teniendo en cuenta las restricciones BL, sin relajar las reglas acordadas. No considerar esta mejora implementada todavía.
+El generador nuevo respeta los dos contadores BL independientes, evita repetir compañeros y comprueba las reglas de género antes de aceptar el calendario. Si no encuentra solución dentro de sus límites de búsqueda, devuelve un error y conserva el calendario anterior. Esta implementación está pendiente de pruebas en Apps Script y con los datos reales del torneo; no se considera validada hasta completar esas pruebas.
 
 ## Despliegue y pruebas
 
