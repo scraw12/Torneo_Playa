@@ -112,8 +112,8 @@ function savePublicResult(matchType, matchId, score1, score2) {
  * Stores the person who fills a PENDIENTE slot in an elimination match.
  * This is intentionally public so the tournament can be completed from the web.
  */
-function savePendingPlayer(matchId, side, playerName) {
-  requireAdmin();
+function savePendingPlayer(sessionToken, matchId, side, playerName) {
+  requireAdmin(sessionToken);
   const id = String(matchId || '').trim();
   const slot = Number(side);
   const name = String(playerName || '').trim();
@@ -183,8 +183,8 @@ function propagateKnockoutWinner_(matchId, winner) {
   });
 }
 
-function adminSaveScoreMultiple(matchType, results) {
-  requireAdmin();
+function adminSaveScoreMultiple(sessionToken, matchType, results) {
+  requireAdmin(sessionToken);
 
   return saveScoreMultiple(
     matchType,
