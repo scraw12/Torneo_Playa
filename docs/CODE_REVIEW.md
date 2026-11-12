@@ -85,7 +85,7 @@ El panel ofrece generar Oro/Plata y generar eliminatorias por separado, pero gen
 ## Pruebas recomendadas antes de considerar fiable el comportamiento
 
 1. Ejecutar setupTournament() sobre una copia vacía y comprobar que crea todas las columnas que necesitan los módulos.
-2. Confirmar que queda una sola definición de cada función global duplicada.
+2. Confirmar que queda una sola definición de cada función global duplicada. (Comprobación estática ya realizada en esta rama).
 3. Probar el acceso público y administrador con dos cuentas distintas, incluyendo guardado simple y múltiple de resultados y asignación PENDIENTE.
 4. Probar Fase 1 con reglas de género y BL individualmente activadas/desactivadas, distintos números de jugadores y distintos partidos por jugador.
 5. Probar clasificación con marcador incompleto, empate, puntos a favor y grupos con desempate manual.
@@ -93,9 +93,21 @@ El panel ofrece generar Oro/Plata y generar eliminatorias por separado, pero gen
 7. Probar propagación de ganadores hasta la final y cierre histórico idempotente.
 8. Probar alta/reactivación de jugador, fallo de escritura y rollback.
 
+## Cambios aplicados en la rama de trabajo
+
+Rama: `feature/fix-setup-public-results-tests`, creada desde `dev`.
+
+- Se eliminaron de `004_FinalStage.gs` las cinco definiciones duplicadas de funciones Web App. Las implementaciones quedan centralizadas en `008_WebApp.gs` y las funciones de clasificación/desempate permanecen en `004_FinalStage.gs`.
+- `setupTournament()` crea la estructura completa de `JUGADORES` (`Jugador`, `Activo`, `Partidos`, `Genero`, `BL`) y de `CLASIFICACION` (incluida `Aviso`). Para hojas existentes añade cabeceras ausentes insertando columnas, en lugar de sobrescribir celdas con datos.
+- El guardado público de resultados simples y múltiples se mantiene habilitado para Fase 1 y eliminatorias.
+- La asignación de `PENDIENTE` queda reservada a administradores: el editor no se muestra en la vista pública y `savePendingPlayer()` exige `requireAdmin()` en servidor. Los resultados de eliminatoria siguen bloqueados mientras el partido tenga `PENDIENTE`.
+- Se añadieron pruebas automatizadas Node (`npm test`) con mocks para contratos del código y guardado público simple/múltiple, propagación de ganador y bloqueo de `PENDIENTE`.
+
 ## Estado de validación
 
 - Revisión estática de código de GitHub: realizada.
+- Comprobación estática de declaraciones globales duplicadas en los 12 módulos `.gs`: no se encontraron duplicados.
+- Suite de pruebas Node añadida; todavía no ejecutada en este entorno.
 - Ejecución de pruebas unitarias: no realizada en esta revisión.
 - Ejecución en Apps Script: no realizada.
 - Prueba contra Google Sheet real: no realizada.
