@@ -181,3 +181,8 @@ Las relaciones funcionales esperables entre jugadores, partidos, clasificación,
 ## Nota de mantenimiento
 
 Si cambia el libro, actualizar este documento a partir del archivo original y conservar separada la información observada en Excel de la lógica confirmada en Apps Script.
+
+
+## Correspondencia con el código
+
+La lectura/escritura de celdas, los cálculos, los identificadores y las convenciones de relación entre hojas están descritos en [Revisión estática del código](CODE_REVIEW.md). El esquema del libro por sí solo no contiene fórmulas de Excel que permitan inferir esos comportamientos.
