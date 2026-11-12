@@ -5,7 +5,7 @@ function test002Phase1Integration() {
     const config = getConfig();
     phase1TestAssert_(config.matchesPerPlayer === 4, 'Debe leer 4 partidos por jugador desde CONFIG.');
 
-    generatePhase1();
+    generatePhase1_();
 
     const phaseSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEETS.PHASE1);
     const matchCount = phaseSheet.getLastRow() - 1;
@@ -30,7 +30,7 @@ function test002Phase1Integration() {
       phase1TestAssert_(appearances[player] === 4, player + ' debe jugar exactamente 4 partidos.');
     });
 
-    updateStandings();
+    updateStandings_();
     const standings = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEETS.STANDINGS);
     phase1TestAssert_(standings.getLastRow() === players.length + 1, 'La clasificación debe incluir a los 24 jugadores.');
     const standingsRows = standings.getRange(2, 1, players.length, 10).getValues();
