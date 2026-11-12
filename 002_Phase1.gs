@@ -57,7 +57,8 @@ function generatePhase1() {
   const genderMap = (genderRules.rule1 || genderRules.rule2 || genderRules.rule3)
     ? getPhase1GenderMap_(players)
     : new Map();
-  const blMap = getPhase1BLRule_() ? getPhase1BLMap_(players) : null;
+  const blMap = getPhase1BLMap_(players);
+  validatePhase1TournamentProfile_(players.length, cfg.matchesPerPlayer, blMap);
   if (players.length < 4) throw new Error('Se necesitan al menos 4 players.');
   if (cfg.matchesPerPlayer < cfg.minimumMatches) throw new Error(`El mínimo de matches por player es ${cfg.minimumMatches}.`);
   if (cfg.matchesPerPlayer < 3 || cfg.matchesPerPlayer > 5) {
