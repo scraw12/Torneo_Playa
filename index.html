@@ -259,10 +259,14 @@
     if (genderAnswer === null) return;
     const gender = genderAnswer.trim();
     if (gender && !/^(chico|chica)$/i.test(gender)) { showMessage('El género debe ser Chico o Chica, o dejarse vacío.', true); return; }
+    const blAnswer = prompt('¿Este jugador debe tener marca BL? Escribe X para marcarlo o deja vacío para no marcarlo:');
+    if (blAnswer === null) return;
+    const bl = blAnswer.trim().toUpperCase() === 'X';
+    if (blAnswer.trim() && !bl) { showMessage('La marca BL debe ser X o dejarse vacía.', true); return; }
     if (!confirm('Se redistribuirán algunos partidos de Fase 1. Esta operación solo está permitida antes de introducir resultados. ¿Continuar?')) return;
     setButtonLoading(button, 'Añadiendo jugador...');
     try {
-      const result = await callServer('adminAddPhase1Player', { name: name, gender: gender });
+      const result = await callServer('adminAddPhase1Player', { name: name, gender: gender, bl: bl });
       DATA = result.data;
       input.value = '';
       render();
