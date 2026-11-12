@@ -19,7 +19,8 @@ function runPhase1BLGeneratorTests() {
     testPhase1GenderRule3_,
     testPhase1GeneratorThreeMatches_,
     testPhase1GeneratorFourMatches_,
-    testPhase1GeneratorFiveMatches_
+    testPhase1GeneratorFiveMatches_,
+    testPhase1Generator30PlayersSixGirlsBL_
   ];
 
   const results = [];
@@ -161,6 +162,43 @@ function testPhase1GenderRule3_() {
     'La validación debe identificar las chicas que no han jugado GG contra GG.');
 }
 
+
+/** Exact regression scenario: 30 players, 4 matches, 6 girls (2 BL), 3 BL total. */
+function testPhase1Generator30PlayersSixGirlsBL_() {
+  const players = [];
+  for (let i = 1; i <= 30; i++) players.push('P' + i);
+  const girls = {};
+  for (let i = 1; i <= 6; i++) girls['P' + i] = 'Chica';
+  const genderMap = phase1TestGenderMap_(girls);
+  const blMap = phase1TestBLMap_(['P1', 'P2', 'P30']);
+  const rules = { rule1: true, rule2: false, rule3: true };
+  const schedule = generatePhase1ConstraintAware_(
+    players, 4, genderMap, rules, blMap
+  );
+  phase1TestAssert_(Array.isArray(schedule),
+    'No se ha generado calendario para 30 jugadores, 6 chicas y 3 BL.');
+  phase1TestAssert_(schedule.length === 30,
+    'El escenario de 30 jugadores debe generar exactamente 30 partidos.');
+  phase1TestAssert_(validatePhase1GenderSchedule_(schedule, genderMap, rules).valid,
+    'El calendario no cumple las reglas de género del escenario real.');
+  phase1TestAssert_(validatePhase1BLSchedule_(schedule, blMap).valid,
+    'El calendario no cumple las restricciones BL del escenario real.');
+  const appearances = new Map(players.map(player => [player, 0]));
+  const partners = new Set();
+  schedule.forEach(match => {
+    match[0].concat(match[1]).forEach(player =>
+      appearances.set(player, appearances.get(player) + 1)
+    );
+    [match[0], match[1]].forEach(team => {
+      const key = pairKey(team[0], team[1]);
+      phase1TestAssert_(!partners.has(key), 'Se repite la pareja ' + key);
+      partners.add(key);
+    });
+  });
+  players.forEach(player => phase1TestAssert_(appearances.get(player) === 4,
+    player + ' no tiene exactamente 4 partidos.'));
+}
+
 /** Generate and validate 3 matches per player with no BL players. */
 function testPhase1GeneratorThreeMatches_() {
   phase1TestGeneratedSchedule_(12, 3, [], {
@@ -230,7 +268,7 @@ function phase1TestGeneratedSchedule_(playerCount, matchesPerPlayer, blPlayers, 
 function phase1TestBLMap_(blPlayers) {
   const selected = new Set(blPlayers || []);
   const map = new Map();
-  for (let i = 1; i <= 20; i++) {
+  for (let i = 1; i <= 30; i++) {
     const player = 'P' + i;
     map.set(normalizePlayerKey_(player), selected.has(player));
   }
