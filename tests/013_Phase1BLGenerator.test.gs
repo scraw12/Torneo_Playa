@@ -17,11 +17,10 @@ function runPhase1BLGeneratorTests() {
     testPhase1BLPlayersHaveNoOwnLimits_,
     testPhase1GenderRules_,
     testPhase1GenderRule3_,
-    testPhase1GeneratorThreeMatches_,
     testPhase1TournamentProfiles_,
     testPhase1ProfileRejectsExcessBL_,
     testPhase1ProfileRejectsWrongMatchCount_,
-    testPhase1Generator30PlayersSixGirlsBL_
+    testPhase1Generator36PlayersThreeMatches_
   ];
 
   const results = [];
@@ -194,27 +193,44 @@ function testPhase1TournamentProfiles_() {
 }
 
 function testPhase1ProfileRejectsExcessBL_() {
-  const blMap = new Map();
-  for (let i = 1; i <= 30; i++) blMap.set('p' + i, i <= 6);
-  let message = '';
-  try {
-    validatePhase1TournamentProfile_(30, 4, blMap);
-  } catch (error) {
-    message = String(error.message || error);
-  }
-  phase1TestAssert_(message.indexOf('BL_COUNT_EXCEEDED:') === 0,
-    'Debe devolver BL_COUNT_EXCEEDED al superar el máximo de BL.');
+  [
+    { players: 24, matches: 4, bl: 5, maximum: 4 },
+    { players: 30, matches: 4, bl: 6, maximum: 5 },
+    { players: 36, matches: 3, bl: 7, maximum: 6 }
+  ].forEach(scenario => {
+    const blMap = new Map();
+    for (let i = 1; i <= scenario.players; i++) {
+      blMap.set('p' + i, i <= scenario.bl);
+    }
+    let message = '';
+    try {
+      validatePhase1TournamentProfile_(scenario.players, scenario.matches, blMap);
+    } catch (error) {
+      message = String(error.message || error);
+    }
+    phase1TestAssert_(message.indexOf('BL_COUNT_EXCEEDED:') === 0,
+      scenario.players + ' jugadores debe rechazar ' + scenario.bl +
+      ' BL (máximo ' + scenario.maximum + ').');
+  });
 }
 
 function testPhase1ProfileRejectsWrongMatchCount_() {
-  let message = '';
-  try {
-    validatePhase1TournamentProfile_(36, 4, new Map());
-  } catch (error) {
-    message = String(error.message || error);
-  }
-  phase1TestAssert_(message.indexOf('MATCH_COUNT_NOT_ALLOWED:') === 0,
-    'Debe devolver MATCH_COUNT_NOT_ALLOWED si no son 3 partidos en 36-40 jugadores.');
+  [
+    { players: 24, matches: 3, expected: 4 },
+    { players: 30, matches: 3, expected: 4 },
+    { players: 30, matches: 5, expected: 4 },
+    { players: 36, matches: 4, expected: 3 }
+  ].forEach(scenario => {
+    let message = '';
+    try {
+      validatePhase1TournamentProfile_(scenario.players, scenario.matches, new Map());
+    } catch (error) {
+      message = String(error.message || error);
+    }
+    phase1TestAssert_(message.indexOf('MATCH_COUNT_NOT_ALLOWED:') === 0,
+      scenario.players + ' jugadores debe rechazar ' + scenario.matches +
+      ' partidos por jugador (esperados ' + scenario.expected + ').');
+  });
 }
 
 /** Exact regression scenario: 30 players, 4 matches, 6 girls (2 BL), 3 BL total. */
@@ -253,23 +269,9 @@ function testPhase1Generator30PlayersSixGirlsBL_() {
     player + ' no tiene exactamente 4 partidos.'));
 }
 
-/** Generate and validate 3 matches per player with no BL players. */
-function testPhase1GeneratorThreeMatches_() {
-  phase1TestGeneratedSchedule_(12, 3, [], {
-    rule1: false, rule2: false, rule3: false
-  });
-}
-
-/** Generate and validate 4 matches per player with a few BL players. */
-function testPhase1GeneratorFourMatches_() {
-  phase1TestGeneratedSchedule_(12, 4, ['P1', 'P5'], {
-    rule1: false, rule2: false, rule3: false
-  });
-}
-
-/** Generate and validate 5 matches per player with several BL players. */
-function testPhase1GeneratorFiveMatches_() {
-  phase1TestGeneratedSchedule_(12, 5, ['P1', 'P2', 'P3', 'P4'], {
+/** Realistic profile generation: 36 players, 3 matches each, 6 BL players. */
+function testPhase1Generator36PlayersThreeMatches_() {
+  phase1TestGeneratedSchedule_(36, 3, ['P1', 'P2', 'P3', 'P4', 'P5', 'P6'], {
     rule1: false, rule2: false, rule3: false
   });
 }
@@ -322,7 +324,7 @@ function phase1TestGeneratedSchedule_(playerCount, matchesPerPlayer, blPlayers, 
 function phase1TestBLMap_(blPlayers) {
   const selected = new Set(blPlayers || []);
   const map = new Map();
-  for (let i = 1; i <= 30; i++) {
+  for (let i = 1; i <= 40; i++) {
     const player = 'P' + i;
     map.set(normalizePlayerKey_(player), selected.has(player));
   }
@@ -334,7 +336,7 @@ function phase1TestBLMap_(blPlayers) {
 
 function phase1TestGenderMap_(overrides) {
   const map = new Map();
-  for (let i = 1; i <= 20; i++) map.set('p' + i, 'chico');
+  for (let i = 1; i <= 40; i++) map.set('p' + i, 'chico');
   Object.keys(overrides || {}).forEach(player => {
     map.set(normalizePlayerKey_(player), String(overrides[player]).toLowerCase());
   });
