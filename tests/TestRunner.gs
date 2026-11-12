@@ -8,7 +8,7 @@ function runAllModuleTests() {
     { name: '002_Phase1 integration', run: test002Phase1Integration },
     { name: '005_Knockouts', run: test005005KnockoutsRequiresFixture },
     { name: '006_History', run: test006006HistoryRequiresFixture },
-    { name: '007_Admin', run: test007007AdminRequiresFixture },
+    { name: '007_Admin', run: test007AdminAuthentication },
     { name: '008_WebApp', run: test008008WebAppRequiresFixture },
     { name: '010_Phase1PlayerManagement', run: test010010Phase1playermanagementRequiresFixture },
     { name: '001 Utils', run: test001Utils },
