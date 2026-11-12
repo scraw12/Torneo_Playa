@@ -48,7 +48,7 @@ function generateRound(players, targetMatches, usedPairs) {
   return recurse(remaining, new Set(usedPairs), out);
 }
 
-function generatePhase1() {
+function generatePhase1_() {
   const ss = SpreadsheetApp.getActive();
   const cfg = getConfig();
   const players = getPlayers();
