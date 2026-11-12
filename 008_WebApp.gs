@@ -22,10 +22,10 @@ function doGet(e) {
 function getPublicTournamentData() {
   const ss = SpreadsheetApp.getActive();
   const cfg = getConfig();
-  const standingsData = readSheetData(SHEETS.STANDINGS, 11);
-  const fase1 = readSheetData(SHEETS.PHASE1, 10);
-  const pairs = readSheetData(SHEETS.FINAL_PAIRS, 5);
-  const eliminatorias = readSheetData(SHEETS.KNOCKOUT, 8);
+  const standingsData = readSheetData_(SHEETS.STANDINGS, 11);
+  const fase1 = readSheetData_(SHEETS.PHASE1, 10);
+  const pairs = readSheetData_(SHEETS.FINAL_PAIRS, 5);
+  const eliminatorias = readSheetData_(SHEETS.KNOCKOUT, 8);
   return {
     tournament: {
       name: String(cfg.name || 'Torneo de vóley playa'),
