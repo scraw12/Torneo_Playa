@@ -57,6 +57,7 @@ function generatePhase1() {
   const genderMap = (genderRules.rule1 || genderRules.rule2 || genderRules.rule3)
     ? getPhase1GenderMap_(players)
     : new Map();
+  const blMap = getPhase1BLMap_(players);
   if (players.length < 4) throw new Error('Se necesitan al menos 4 players.');
   if (cfg.matchesPerPlayer < cfg.minimumMatches) throw new Error(`El mínimo de matches por player es ${cfg.minimumMatches}.`);
   if ((players.length * cfg.matchesPerPlayer) % 4 !== 0) {
@@ -86,7 +87,8 @@ function generatePhase1() {
           [orderedPlayers[(i + 2) % n], orderedPlayers[(i + 4) % n]]
         ]);
       }
-      if (validatePhase1GenderSchedule_(candidate, genderMap, genderRules).valid) {
+      if (validatePhase1GenderSchedule_(candidate, genderMap, genderRules).valid &&
+          validatePhase1BLSchedule_(candidate, blMap).valid) {
         schedule.push(...candidate);
         validSchedule = true;
       }
@@ -141,7 +143,8 @@ function generatePhase1() {
         schedule.push(found);
       }
       generated = ok && Object.values(counts).every(value => value === cfg.matchesPerPlayer) &&
-        validatePhase1GenderSchedule_(schedule, genderMap, genderRules).valid;
+        validatePhase1GenderSchedule_(schedule, genderMap, genderRules).valid &&
+        validatePhase1BLSchedule_(schedule, blMap).valid;
     }
     if (!generated) {
       throw new Error('No he encontrado una combinación válida que cumpla el reparto de partidos, no repita compañeros y respete las reglas de género activas. Prueba otra configuración.');
