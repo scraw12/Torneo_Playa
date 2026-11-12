@@ -141,3 +141,13 @@ La implementación generalizada se ha añadido a la rama `feature/phase1-bl-awar
 4. No mostrar datos internos de género o BL en la Web App pública.
 5. Probar los escenarios con reglas activadas y desactivadas, reparto exacto, compañeros no repetidos y alta de jugador antes de considerar una modificación terminada.
 6. Distinguir siempre entre código actualizado en GitHub, código copiado al proyecto Apps Script y versión desplegada de la Web App: son pasos diferentes.
+
+
+## Pruebas automatizadas
+
+La rama `test/phase1-bl-aware-generator` contiene `014_Phase1BLGeneratorTests.gs`.
+
+- Ejecutar `runPhase1BLGeneratorTests()` para las pruebas normales: validación BL de compañero/rival y contadores independientes, exención BL, reglas de género 1/2/3 y generación con 3/4/5 partidos por jugador.
+- Ejecutar `runPhase1BLGeneratorStressTests()` por separado para el caso de 29 jugadores, 4 partidos y 4 BL.
+- Las pruebas son in-memory y no escriben en hojas ni Script Properties. Requieren que los archivos de producción `001_Utils.gs`, `012_TournamentRules.gs` y `013_Phase1BLGenerator.gs` estén en el mismo proyecto Apps Script.
+- El generador es aleatorio y está limitado a 40 segundos/90.000 nodos. Un fallo de generación es un resultado de búsqueda no resuelta dentro del límite, no una prueba de imposibilidad matemática.
