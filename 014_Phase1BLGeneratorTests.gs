@@ -14,6 +14,7 @@ function runPhase1BLGeneratorTests() {
     testPhase1BLValidatorIndependentLimits_,
     testPhase1BLValidatorRejectsRepeatedPartnerBL_,
     testPhase1BLValidatorRejectsRepeatedOpponentBL_,
+    testPhase1BLPlayersHaveNoOwnLimits_,
     testPhase1GenderRules_,
     testPhase1GenderRule3_,
     testPhase1GeneratorThreeMatches_,
@@ -55,6 +56,17 @@ function runPhase1BLGeneratorTests() {
   return summary;
 }
 
+/** Optional stress test for the previously problematic 29-player / 4-match case. */
+function runPhase1BLGeneratorStressTests() {
+  const started = Date.now();
+  phase1TestGeneratedSchedule_(29, 4, ['P1', 'P2', 'P3', 'P4'], {
+    rule1: false, rule2: false, rule3: false
+  });
+  const elapsed = Date.now() - started;
+  Logger.log('PASS: 29 jugadores, 4 partidos, 4 BL (%s ms)', elapsed);
+  return { passed: true, players: 29, matchesPerPlayer: 4, blPlayers: 4, ms: elapsed };
+}
+
 /** A non-BL player may use each BL limit once, independently. */
 function testPhase1BLValidatorIndependentLimits_() {
   const bl = phase1TestBLMap_(['B', 'D']);
@@ -88,6 +100,19 @@ function testPhase1BLValidatorRejectsRepeatedOpponentBL_() {
   const result = validatePhase1BLSchedule_(matches, bl);
   phase1TestAssert_(!result.valid && result.reason === 'BL_RIVAL',
     'Debe detectar dos partidos contra equipos con BL.');
+}
+
+
+/** BL players are exempt from both BL-specific counters. */
+function testPhase1BLPlayersHaveNoOwnLimits_() {
+  const bl = phase1TestBLMap_(['A', 'B', 'C', 'D', 'E', 'F']);
+  const matches = [
+    [['A', 'B'], ['C', 'D']],
+    [['A', 'C'], ['B', 'D']],
+    [['A', 'D'], ['B', 'C']]
+  ];
+  phase1TestAssert_(validatePhase1BLSchedule_(matches, bl).valid,
+    'Los jugadores BL no deben tener límites BL propios.');
 }
 
 /** Rules 1 and 2 are independent and rule 1 allows mixed-vs-BB. */
