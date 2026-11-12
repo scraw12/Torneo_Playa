@@ -83,6 +83,20 @@
       </div>
     </div>
     <div class="card" style="margin-bottom:14px">
+      <h3>Reglas de género · Fase 1</h3>
+      <div class="muted" style="margin-bottom:12px">Puedes activar cada regla por separado. Los cambios se guardan y se aplican al generar la Fase 1 o al incorporar jugadores. No afectan a ORO / PLATA ni a las eliminatorias.</div>
+      <label style="display:flex;gap:10px;align-items:flex-start;margin:10px 0">
+        <input id="phase1Rule1" type="checkbox" style="margin-top:3px">
+        <span><strong>Regla 1:</strong> una pareja formada por dos chicas solo puede enfrentarse a otra pareja formada por dos chicas.</span>
+      </label>
+      <label style="display:flex;gap:10px;align-items:flex-start;margin:10px 0">
+        <input id="phase1Rule2" type="checkbox" style="margin-top:3px">
+        <span><strong>Regla 2:</strong> una chica siempre debe enfrentarse al menos a otra chica. Una pareja de dos chicos no puede enfrentarse a un equipo que tenga chicas.</span>
+      </label>
+      <div class="muted" id="phase1RulesStatus" style="margin:8px 0">Cargando reglas...</div>
+      <button class="save" id="savePhase1RulesButton" onclick="savePhase1GenderRules()">Guardar reglas</button>
+    </div>
+    <div class="card" style="margin-bottom:14px">
       <h3>Incorporar jugador a Fase 1</h3>
       <div class="muted" style="margin-bottom:10px">Añade un participante después de generar los partidos. Se redistribuirán los partidos necesarios para mantener el mismo número de encuentros por jugador. Solo se permite antes de introducir resultados.</div>
       <div id="phase1PlayerCounts" class="muted" style="margin-bottom:10px">Todavía no hay partidos generados.</div>
@@ -237,10 +251,10 @@
     const button = document.getElementById('addPhase1PlayerButton');
     const name = input.value.trim();
     if (!name) { showMessage('Escribe el nombre del jugador.', true); return; }
-    const genderAnswer = prompt('Indica el género del jugador (Chico o Chica):');
+    const genderAnswer = prompt('Género del jugador (Chico o Chica). Puedes dejarlo vacío si las reglas están desactivadas:');
     if (genderAnswer === null) return;
     const gender = genderAnswer.trim();
-    if (!/^(chico|chica)$/i.test(gender)) { showMessage('El género debe ser Chico o Chica.', true); return; }
+    if (gender && !/^(chico|chica)$/i.test(gender)) { showMessage('El género debe ser Chico o Chica, o dejarse vacío.', true); return; }
     if (!confirm('Se redistribuirán algunos partidos de Fase 1. Esta operación solo está permitida antes de introducir resultados. ¿Continuar?')) return;
     setButtonLoading(button, 'Añadiendo jugador...');
     try {
@@ -252,6 +266,38 @@
       activate('admin');
       showMessage('Jugador añadido. Partidos modificados: ' + result.modifiedMatches.length +
         '. Partidos nuevos: ' + result.addedMatches.length + '.');
+    } catch (e) {
+      showMessage(e.message || String(e), true);
+    } finally {
+      clearButtonLoading(button);
+    }
+  }
+
+  async function loadPhase1GenderRules() {
+    const rules = await callServer('adminGetPhase1GenderRules');
+    document.getElementById('phase1Rule1').checked = !!rules.rule1;
+    document.getElementById('phase1Rule2').checked = !!rules.rule2;
+    document.getElementById('phase1RulesStatus').textContent =
+      'Regla 1: ' + (rules.rule1 ? 'Activada' : 'Desactivada') +
+      ' · Regla 2: ' + (rules.rule2 ? 'Activada' : 'Desactivada');
+  }
+
+  async function savePhase1GenderRules() {
+    if (!window.IS_ADMIN) { showMessage('No tienes permisos de administrador.', true); return; }
+    const button = document.getElementById('savePhase1RulesButton');
+    const settings = {
+      rule1: document.getElementById('phase1Rule1').checked,
+      rule2: document.getElementById('phase1Rule2').checked
+    };
+    setButtonLoading(button, 'Guardando reglas...');
+    try {
+      const saved = await callServer('adminSavePhase1GenderRules', settings);
+      document.getElementById('phase1Rule1').checked = !!saved.rule1;
+      document.getElementById('phase1Rule2').checked = !!saved.rule2;
+      document.getElementById('phase1RulesStatus').textContent =
+        'Regla 1: ' + (saved.rule1 ? 'Activada' : 'Desactivada') +
+        ' · Regla 2: ' + (saved.rule2 ? 'Activada' : 'Desactivada');
+      showMessage('Reglas de Fase 1 guardadas.');
     } catch (e) {
       showMessage(e.message || String(e), true);
     } finally {
@@ -574,6 +620,7 @@
       if(window.IS_ADMIN){
         const status=await callServer('getAdminStatus');
         document.getElementById('adminStatus').textContent='Administrador identificado: '+status.email;
+        await loadPhase1GenderRules();
       }
     } catch(e){ document.getElementById('loading').textContent='No se ha podido cargar el torneo: '+(e.message||e); }
   }
