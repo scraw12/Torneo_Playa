@@ -161,15 +161,13 @@
 
   <section id="clasificacion" class="view">
     <h2>Clasificación</h2>
-    <? if (isAdmin) { ?>
     <div class="card" id="tieBreakCard" style="margin:10px 0 14px;display:none">
       <strong>Resolver empates antes de generar ORO / PLATA</strong>
       <p class="muted" style="margin:8px 0">En los grupos empatados por victorias, diferencia de puntos y puntos a favor, introduce una posición final distinta para cada jugador (por ejemplo, 5, 6 y 7). El número más bajo queda por delante. Guarda los cambios antes de generar ORO / PLATA.</p>
       <div id="tieBreakStatus" class="muted" style="margin:8px 0"></div>
       <button class="save" id="saveTieBreaksButton" onclick="saveManualTieBreaks()">Guardar posiciones y actualizar clasificación</button>
     </div>
-    <? } ?>
-    <div class="scroll"><table><thead><tr><th>Pos.</th><th>Jugador</th><th>PJ</th><th>V</th><th>D</th><th>PF</th><th>PC</th><th>Dif.</th><th>%</th><th>Desempate manual (guardado)</th><? if (isAdmin) { ?><th>Editar posición</th><th>Estado</th><? } ?></tr></thead><tbody id="clasifBody"></tbody></table></div>
+    <div class="scroll"><table><thead><tr><th>Pos.</th><th>Jugador</th><th>PJ</th><th>V</th><th>D</th><th>PF</th><th>PC</th><th>Dif.</th><th>%</th><th>Desempate manual (guardado)</th><th id="tieBreakEditHeader" style="display:none">Editar posición</th><th id="tieBreakStatusHeader" style="display:none">Estado</th></tr></thead><tbody id="clasifBody"></tbody></table></div>
   </section>
 
   <section id="oro" class="view">
@@ -495,6 +493,10 @@
         <td>${esc(r.pointsFor)}</td><td>${esc(r.pointsAgainst)}</td><td>${esc(r.diff)}</td><td>${(Number(r.winPct || 0) * 100).toFixed(1)}%</td><td>${savedManualCell}</td>${isAdmin ? `<td>${manualCell}</td><td>${statusCell}</td>` : ''}</tr>`;
     }).join('') : `<tr><td colspan="${isAdmin ? 12 : 10}" class="empty">Sin clasificación todavía.</td></tr>`;
 
+    const editHeader = document.getElementById('tieBreakEditHeader');
+    const statusHeader = document.getElementById('tieBreakStatusHeader');
+    if (editHeader) editHeader.style.display = isAdmin ? '' : 'none';
+    if (statusHeader) statusHeader.style.display = isAdmin ? '' : 'none';
     const card = document.getElementById('tieBreakCard');
     const status = document.getElementById('tieBreakStatus');
     const saveButton = document.getElementById('saveTieBreaksButton');
