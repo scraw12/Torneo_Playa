@@ -4,6 +4,15 @@
  * BL partner/opponent limits are independent and apply only to non-BL players.
  */
 function generatePhase1ConstraintAware_(players, matchesPerPlayer, genderMap, genderRules, blMap) {
+  // Fast round-based path for 12-player groups: each round gives every player
+  // exactly one appearance, avoiding the expensive partial-match search.
+  if (players.length === 12 && (matchesPerPlayer === 4 || matchesPerPlayer === 5) &&
+      !(genderRules && (genderRules.rule1 || genderRules.rule2 || genderRules.rule3))) {
+    const fastSchedule = generatePhase1TwelvePlayerRounds_(
+      players, matchesPerPlayer, blMap
+    );
+    if (fastSchedule) return fastSchedule;
+  }
   const startedAt = Date.now();
   const maxRuntimeMs = 55000;
   const maxNodes = 1000000;
@@ -209,4 +218,104 @@ function generatePhase1ConstraintAware_(players, matchesPerPlayer, genderMap, ge
   }
 
   return recurse() ? schedule.slice() : null;
+}
+
+
+/**
+ * Builds complete rounds for 12 players. A round partitions all players into
+ * three 2v2 matches; backtracking between randomized round candidates preserves
+ * exact appearances while checking partner/opponent BL counters independently.
+ */
+function generatePhase1TwelvePlayerRounds_(players, rounds, blMap) {
+  const maxRoundCandidates = 1200;
+  const maxRuntimeMs = 45000;
+  const startedAt = Date.now();
+  const usedPairs = new Set();
+  const partnerCounts = new Map();
+  const opponentCounts = new Map();
+  const schedule = [];
+  let attempts = 0;
+  const hasBL = player => blMap && blMap.get(normalizePlayerKey_(player)) === true;
+
+  function buildCandidateRound() {
+    const shuffled = shuffle(players.slice());
+    const round = [];
+    for (let i = 0; i < shuffled.length; i += 4) {
+      const group = shuffled.slice(i, i + 4);
+      const split = shuffle([
+        [[group[0], group[1]], [group[2], group[3]]],
+        [[group[0], group[2]], [group[1], group[3]]],
+        [[group[0], group[3]], [group[1], group[2]]]
+      ])[0];
+      round.push(split);
+    }
+    return round;
+  }
+
+  function addRound(round) {
+    const additions = [];
+    for (const match of round) {
+      const [a, b] = match;
+      const pairA = pairKey(a[0], a[1]);
+      const pairB = pairKey(b[0], b[1]);
+      if (usedPairs.has(pairA) || usedPairs.has(pairB)) return null;
+      const partner = [];
+      const opponent = [];
+      for (const [team, rivals] of [[a, b], [b, a]]) {
+        const rivalsHaveBL = rivals.some(hasBL);
+        team.forEach(player => {
+          if (hasBL(player)) return;
+          const teammate = team[0] === player ? team[1] : team[0];
+          if (hasBL(teammate)) partner.push(player);
+          if (rivalsHaveBL) opponent.push(player);
+        });
+      }
+      if (partner.some(player => (partnerCounts.get(player) || 0) >= 1) ||
+          opponent.some(player => (opponentCounts.get(player) || 0) >= 1)) return null;
+      additions.push({pairA, pairB, partner, opponent});
+    }
+    return additions;
+  }
+
+  function applyRound(round, additions, direction) {
+    additions.forEach((entry, index) => {
+      const match = round[index];
+      if (direction > 0) {
+        usedPairs.add(entry.pairA);
+        usedPairs.add(entry.pairB);
+        entry.partner.forEach(player => partnerCounts.set(player, (partnerCounts.get(player) || 0) + 1));
+        entry.opponent.forEach(player => opponentCounts.set(player, (opponentCounts.get(player) || 0) + 1));
+        schedule.push(match);
+      } else {
+        schedule.pop();
+        usedPairs.delete(entry.pairA);
+        usedPairs.delete(entry.pairB);
+        entry.partner.forEach(player => {
+          const count = (partnerCounts.get(player) || 0) - 1;
+          if (count) partnerCounts.set(player, count); else partnerCounts.delete(player);
+        });
+        entry.opponent.forEach(player => {
+          const count = (opponentCounts.get(player) || 0) - 1;
+          if (count) opponentCounts.set(player, count); else opponentCounts.delete(player);
+        });
+      }
+    });
+  }
+
+  function search(roundIndex) {
+    if (roundIndex === rounds) return true;
+    if (Date.now() - startedAt > maxRuntimeMs) return false;
+    for (let i = 0; i < maxRoundCandidates; i++) {
+      if (++attempts > maxRoundCandidates * rounds) return false;
+      const round = buildCandidateRound();
+      const additions = addRound(round);
+      if (!additions) continue;
+      applyRound(round, additions, 1);
+      if (search(roundIndex + 1)) return true;
+      applyRound(round, additions, -1);
+    }
+    return false;
+  }
+
+  return search(0) ? schedule.slice() : null;
 }
