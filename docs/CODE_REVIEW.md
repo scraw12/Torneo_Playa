@@ -54,9 +54,12 @@ Esta es una revisión estática del código descargado de GitHub. No se han ejec
 - newTournament() limpia FASE1, CLASIFICACION, ORO_PLATA y ELIMINATORIAS; conserva jugadores, configuración e históricos.
 
 ### Web App y permisos
-- La identidad administrativa compara ADMIN_EMAIL en Script Properties con Session.getActiveUser().getEmail().
-- Las acciones admin prefijadas suelen llamar requireAdmin().
-- savePublicResult(), savePublicScoreMultiple() y savePendingPlayer() no exigen administrador en el código inspeccionado. Esto permite que la interfaz pública pueda escribir marcadores y completar slots PENDIENTE. Debe ser una decisión consciente y validarse con la configuración de despliegue.
+- El acceso administrativo utiliza cuentas individuales de usuario y contraseña, con hashes PBKDF2-HMAC-SHA256 y sal por cuenta.
+- El propietario registra su cuenta de Google desde el editor mediante configureAdministrator() y gestiona usuarios desde el menú de la hoja.
+- Las sesiones se guardan en CacheService, tienen caducidad deslizante de seis horas y se revocan al cerrar sesión o eliminar la cuenta.
+- Los endpoints administrativos exigen un token y validan requireAdmin(sessionToken). Los puntos de entrada internos del motor terminan en guion bajo para que no sean invocables desde google.script.run.
+- savePublicResult() y savePublicScoreMultiple() siguen permitiendo guardar marcadores desde la vista pública, como decisión funcional del proyecto.
+- savePendingPlayer() ya no es público: exige una sesión administrativa válida.
 - Los datos públicos no incluyen explícitamente las columnas de género ni BL.
 
 ## Hallazgos que requieren atención
@@ -68,7 +71,7 @@ doGet, getPublicTournamentData, savePublicResult, savePendingPlayer y propagateK
 setupTournament() inicializa JUGADORES solo con A:B, mientras que las reglas requieren cabeceras Genero y BL, y el módulo de conteo usa Partidos en C. El Excel actual sí contiene A:E. Una hoja nueva creada desde setupTournament() no queda preparada completamente para el resto de módulos.
 
 ### 3. Escritura pública de resultados — decisión de seguridad
-Las funciones públicas permiten escribir resultados y asignar jugadores pendientes sin requireAdmin(). Si esto es intencionado, debe documentarse y probarse; si solo el administrador debe poder hacerlo, hay que proteger esos endpoints y adaptar la interfaz.
+El guardado público de marcadores se mantiene habilitado deliberadamente. La asignación de jugadores a slots PENDIENTE sí requiere sesión administrativa.
 
 ### 4. Alta de jugador: posible estado parcial
 adminAddPhase1Player() registra/reactiva al jugador antes del bloque try que escribe el calendario. El rollback cubre errores de escritura del calendario, pero no todos los errores que pudieran ocurrir durante la preparación posterior al alta. Además, la variable displayNames se construye y no se utiliza. Debe probarse la reversión ante errores y los casos de reactivación.
@@ -100,7 +103,8 @@ Rama: `feature/fix-setup-public-results-tests`, creada desde `dev`.
 - Se eliminaron de `004_FinalStage.gs` las cinco definiciones duplicadas de funciones Web App. Las implementaciones quedan centralizadas en `008_WebApp.gs` y las funciones de clasificación/desempate permanecen en `004_FinalStage.gs`.
 - `setupTournament()` crea la estructura completa de `JUGADORES` (`Jugador`, `Activo`, `Partidos`, `Genero`, `BL`) y de `CLASIFICACION` (incluida `Aviso`). Para hojas existentes añade cabeceras ausentes insertando columnas, en lugar de sobrescribir celdas con datos.
 - El guardado público de resultados simples y múltiples se mantiene habilitado para Fase 1 y eliminatorias.
-- La asignación de `PENDIENTE` queda reservada a administradores: el editor no se muestra en la vista pública y `savePendingPlayer()` exige `requireAdmin()` en servidor. Los resultados de eliminatoria siguen bloqueados mientras el partido tenga `PENDIENTE`.
+- La asignación de `PENDIENTE` queda reservada a administradores: el editor no se muestra en la vista pública y `savePendingPlayer(sessionToken, ...)` exige una sesión válida en servidor. Los resultados de eliminatoria siguen bloqueados mientras el partido tenga `PENDIENTE`.
+- Se añadió el acceso administrativo por usuario/contraseña, la gestión de cuentas desde el editor y la suite Apps Script `test007AdminAuthentication()` para comprobar login, sesión, logout y revocación.
 - Se añadieron pruebas automatizadas Node (`npm test`) con mocks para contratos del código y guardado público simple/múltiple, propagación de ganador y bloqueo de `PENDIENTE`.
 
 ## Estado de validación

@@ -8,24 +8,24 @@
 
 function doGet(e) {
   const isAdminRequest = e && e.parameter && String(e.parameter.admin || '') === '1';
-  const adminAllowed = isAdminRequest && isAdminUser();
+  const adminAllowed = false;
 
   const template = HtmlService.createTemplateFromFile('index');
   template.isAdmin = adminAllowed;
   template.adminRequested = isAdminRequest;
 
   return template.evaluate()
-    .setTitle(adminAllowed ? 'Administración · Torneo Vóley Playa' : 'Torneo Vóley Playa')
+    .setTitle(isAdminRequest ? 'Administración · Torneo Vóley Playa' : 'Torneo Vóley Playa')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
 
 function getPublicTournamentData() {
   const ss = SpreadsheetApp.getActive();
   const cfg = getConfig();
-  const standingsData = readSheetData(SHEETS.STANDINGS, 11);
-  const fase1 = readSheetData(SHEETS.PHASE1, 10);
-  const pairs = readSheetData(SHEETS.FINAL_PAIRS, 5);
-  const eliminatorias = readSheetData(SHEETS.KNOCKOUT, 8);
+  const standingsData = readSheetData_(SHEETS.STANDINGS, 11);
+  const fase1 = readSheetData_(SHEETS.PHASE1, 10);
+  const pairs = readSheetData_(SHEETS.FINAL_PAIRS, 5);
+  const eliminatorias = readSheetData_(SHEETS.KNOCKOUT, 8);
   return {
     tournament: {
       name: String(cfg.name || 'Torneo de vóley playa'),
@@ -97,7 +97,7 @@ function savePublicResult(matchType, matchId, score1, score2) {
   const rowNumber = rowIndex + 2;
   if (normalizedType === 'FASE1') {
     sh.getRange(rowNumber, 9, 1, 2).setValues([[s1, s2]]);
-    updateStandings();
+    updateStandings_();
   } else {
     sh.getRange(rowNumber, 6, 1, 2).setValues([[s1, s2]]);
     const winner = s1 > s2 ? String(row[3]) : String(row[4]);
@@ -112,8 +112,8 @@ function savePublicResult(matchType, matchId, score1, score2) {
  * Stores the person who fills a PENDIENTE slot in an elimination match.
  * This is intentionally public so the tournament can be completed from the web.
  */
-function savePendingPlayer(matchId, side, playerName) {
-  requireAdmin();
+function savePendingPlayer(sessionToken, matchId, side, playerName) {
+  requireAdmin(sessionToken);
   const id = String(matchId || '').trim();
   const slot = Number(side);
   const name = String(playerName || '').trim();
@@ -183,8 +183,8 @@ function propagateKnockoutWinner_(matchId, winner) {
   });
 }
 
-function adminSaveScoreMultiple(matchType, results) {
-  requireAdmin();
+function adminSaveScoreMultiple(sessionToken, matchType, results) {
+  requireAdmin(sessionToken);
 
   return saveScoreMultiple(
     matchType,
@@ -256,7 +256,7 @@ function saveScoreMultiple(matchType, results) {
     const scoreValues = rows.map(row => [row[8], row[9]]);
     updates.forEach(item => { scoreValues[item.rowIndex] = [item.score1, item.score2]; });
     sh.getRange(2, 9, scoreValues.length, 2).setValues(scoreValues);
-    updateStandings();
+    updateStandings_();
   } else {
     const resultValues = rows.map(row => [row[5], row[6], row[7]]);
     updates.forEach(item => { resultValues[item.rowIndex] = [item.score1, item.score2, item.winner]; });

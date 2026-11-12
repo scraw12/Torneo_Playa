@@ -1,6 +1,6 @@
 /** Admin data support and knockout match counters used by the administration view. */
-function adminGetKnockoutManagementData() {
-  requireAdmin();
+function adminGetKnockoutManagementData(sessionToken) {
+  requireAdmin(sessionToken);
   updateKnockoutPlayerCounts_();
   const data = getPublicTournamentData();
   const counts = getKnockoutPlayerCounts_();

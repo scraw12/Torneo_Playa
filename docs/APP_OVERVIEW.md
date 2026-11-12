@@ -93,6 +93,10 @@ El comportamiento implementado y los hallazgos técnicos se documentan en [Revis
 
 ## Permisos de la Web App
 
-La vista pública puede guardar y modificar marcadores de Fase 1 y eliminatorias, tanto de forma individual como múltiple. La asignación de un jugador a un slot `PENDIENTE` queda restringida a administradores: el editor solo se muestra en la vista administrativa y el endpoint de servidor exige `requireAdmin()`. No se permite registrar el resultado de una eliminatoria mientras alguna de sus parejas siga conteniendo `PENDIENTE`.
+La vista pública puede guardar y modificar marcadores de Fase 1 y eliminatorias, tanto de forma individual como múltiple. La asignación de un jugador a un slot `PENDIENTE` queda restringida a administradores. El acceso a administración se realiza mediante cuentas individuales de usuario y contraseña, gestionadas por el propietario desde el editor de Apps Script. Cada petición administrativa valida un token de sesión en el servidor; no se confía en el indicador visual de administrador del navegador.
+
+Las contraseñas se almacenan como hashes PBKDF2-HMAC-SHA256 con sal individual. Las sesiones se guardan en caché del servidor, con caducidad deslizante de seis horas y cierre de sesión. El propietario puede crear y revocar cuentas desde el menú de la hoja. La edición pública de marcadores continúa disponible como estaba diseñada.
+
+No se permite registrar el resultado de una eliminatoria mientras alguna de sus parejas siga conteniendo `PENDIENTE`.
 
 La revisión de implementación y los casos de prueba están en [CODE_REVIEW.md](CODE_REVIEW.md) y [tests/README.md](../tests/README.md).

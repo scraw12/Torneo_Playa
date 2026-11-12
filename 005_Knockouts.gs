@@ -91,7 +91,7 @@ function seedBracketSlots(slots, protectedTeams) {
   return result;
 }
 
-function generateKnockout() {
+function generateKnockout_() {
   const ss = SpreadsheetApp.getActive();
   const sh = ss.getSheetByName(SHEETS.KNOCKOUT);
   const all = [];
@@ -318,7 +318,7 @@ function getFinalPairs(group) {
 }
 
 /** Splits the current classification into ORO and PLATA and fixes the pairs. */
-function generateGoldSilver() {
+function generateGoldSilver_() {
   const ss = SpreadsheetApp.getActive();
   const standingsSheet = ss.getSheetByName(SHEETS.STANDINGS);
   const finalSheet = ss.getSheetByName(SHEETS.FINAL_PAIRS);
@@ -385,7 +385,7 @@ function generateGoldSilver() {
   finalSheet.autoResizeColumns(1, 5);
 
   // The knockout generator reads the fixed pairs just written above.
-  generateKnockout();
+  generateKnockout_();
   SpreadsheetApp.getActive().toast(
     'ORO y PLATA generados: ' + goldPlayers.length + ' jugadores en ORO y ' +
     silverPlayers.length + ' en PLATA.'

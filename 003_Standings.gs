@@ -1,4 +1,4 @@
-function updateStandings() {
+function updateStandings_() {
   const ss = SpreadsheetApp.getActive();
   const players = getPlayers();
   const phaseSheet = ss.getSheetByName(SHEETS.PHASE1);
