@@ -2,6 +2,17 @@
 
 Aplicación de gestión de torneos de vóley playa 2 contra 2, construida con Google Sheets y Google Apps Script. Incluye una Web App con vistas públicas y una zona de administración protegida.
 
+## Flujo de ramas
+
+El desarrollo se organiza en tres niveles:
+- `dev`: rama estable de integración. Solo recibe cambios después de que hayan superado las pruebas y el usuario autorice la integración.
+- `feature/phase1-bl-aware-generator`: rama de implementación. Aquí se desarrollan y corrigen las funcionalidades del generador BL-aware.
+- `test/phase1-bl-aware-generator`: rama de pruebas. Parte de la rama `feature` y se utiliza para añadir pruebas automatizadas, ejecutar escenarios y corregir los problemas detectados durante la validación.
+
+Flujo previsto: `dev` → `feature` → `test` → revisión de resultados → integración autorizada en `dev`. No se deben mezclar cambios de prueba sin revisar en `dev`. Mantener `dev` intacta mientras el generador no esté validado.
+
+Las ramas `feature/phase1-bl-aware-generator` y `test/phase1-bl-aware-generator` se crearon desde `dev` y desde `feature`, respectivamente. La rama `test` parte del mismo estado de implementación que `feature` en el momento de su creación.
+
 ## Estructura y desarrollo
 
 - El proyecto de Apps Script está dividido en varios archivos `.gs` que se ejecutan dentro del mismo proyecto y comparten sus funciones.
