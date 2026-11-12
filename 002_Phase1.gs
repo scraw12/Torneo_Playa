@@ -59,8 +59,6 @@ function generatePhase1() {
   }
 
   const sh = ss.getSheetByName(SHEETS.PHASE1);
-  const old = sh.getLastRow();
-  if (old > 1) sh.getRange(2,1,old-1,10).clearContent();
 
   // Construcción global. Guardamos las pairs ya usadas en todas las rounds.
   const usedPairs = new Set();
@@ -147,6 +145,9 @@ function generatePhase1() {
 
   // Ordenamos aleatoriamente los matches y dejamos la court vacía para asignación manual.
   const rows = schedule.map((f,i)=>[i+1,'',Math.floor(i/cfg.courts)+1,f[0][0],f[0][1],'VS',f[1][0],f[1][1],'','']);
+  // Solo se sustituye el calendario anterior cuando ya existe uno válido.
+  const old = sh.getLastRow();
+  if (old > 1) sh.getRange(2,1,old-1,10).clearContent();
   sh.getRange(2,1,rows.length,10).setValues(rows);
   sh.getRange(2,2,rows.length,1).setBackground('#fff2cc');
   sh.getRange(2,9,rows.length,2).setBackground('#d9ead3');
