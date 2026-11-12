@@ -51,6 +51,10 @@
     .badge.silver { background:var(--silver); }
     .empty { color:var(--muted); padding:20px 0; text-align:center; }
     .loading { text-align:center; padding:50px 10px; color:var(--muted); }
+    .login-wrap { max-width:420px; margin:42px auto; }
+    .login-wrap input { width:100%; padding:12px; margin:6px 0 14px; border:1px solid var(--border); border-radius:8px; font-size:16px; }
+    .login-wrap button { width:100%; padding:11px; }
+    .login-error { color:#9b1c1c; min-height:20px; margin:6px 0 12px; }
     @media (max-width:650px) {
       header .title { font-size:20px; }
       nav { top:65px; }
@@ -68,11 +72,28 @@
 <main>
   <div id="message" class="msg"></div>
   <div id="loading" class="loading">Cargando torneo...</div>
+  <section id="adminLogin" class="login-wrap" style="display:none">
+    <div class="card">
+      <h2>Acceso de administración</h2>
+      <p class="muted">Introduce el usuario y la contraseña que te ha facilitado el organizador.</p>
+      <form id="adminLoginForm" onsubmit="submitAdminLogin(event)">
+        <label for="adminUsername">Usuario</label>
+        <input id="adminUsername" name="username" type="text" autocomplete="username" required maxlength="32">
+        <label for="adminPassword">Contraseña</label>
+        <input id="adminPassword" name="password" type="password" autocomplete="current-password" required maxlength="128">
+        <div id="adminLoginError" class="login-error" role="alert"></div>
+        <button class="save" id="adminLoginButton" type="submit">Entrar</button>
+      </form>
+    </div>
+  </section>
   <section id="admin" class="view">
     <h2>Administración</h2>
     <div class="card" style="margin-bottom:14px">
-      <h3>Control del torneo</h3>
-      <div class="muted" style="margin-bottom:12px">Estas acciones solo funcionan con tu cuenta de administrador.</div>
+      <div style="display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap">
+        <h3>Control del torneo</h3>
+        <button class="save" type="button" onclick="logoutAdmin()">Cerrar sesión</button>
+      </div>
+      <div class="muted" style="margin-bottom:12px">Estas acciones requieren una sesión de administración válida.</div>
       <div style="display:flex;flex-wrap:wrap;gap:8px">
         <button class="save" onclick="adminAction('adminGeneratePhase1','Fase 1 generada',this)">🎲 Generar Fase 1</button>
         <button class="save" onclick="adminAction('adminUpdateStandings','Clasificación actualizada',this)">📊 Actualizar clasificación</button>
@@ -172,6 +193,7 @@
 
 <script>
   let DATA = null;
+  let ADMIN_TOKEN = '';
   const tabs = [
     ['resumen','Resumen'], ['fase1','Fase 1'], ['clasificacion','Clasificación'],
     ['oro','ORO'], ['plata','PLATA'], ['eliminatorias','Eliminatorias']
@@ -185,6 +207,10 @@
     const el=document.getElementById('message');
     el.textContent=text; el.className='msg'+(error?' error':''); el.style.display='block';
     clearTimeout(window.msgTimer); window.msgTimer=setTimeout(()=>el.style.display='none',3500);
+  }
+  function callAdminServer(name, ...args) {
+    if (!ADMIN_TOKEN) return Promise.reject(new Error('Inicia sesión para continuar.'));
+    return callServer(name, ADMIN_TOKEN, ...args);
   }
   function callServer(name, ...args) {
     return new Promise((resolve,reject)=>{
@@ -276,7 +302,7 @@
     if (!confirm('Se redistribuirán algunos partidos de Fase 1. Esta operación solo está permitida antes de introducir resultados. ¿Continuar?')) return;
     setButtonLoading(button, 'Añadiendo jugador...');
     try {
-      const result = await callServer('adminAddPhase1Player', { name: name, gender: gender, bl: bl });
+      const result = await callAdminServer('adminAddPhase1Player', { name: name, gender: gender, bl: bl });
       DATA = result.data;
       input.value = '';
       render();
@@ -292,7 +318,7 @@
   }
 
   async function loadPhase1GenderRules() {
-    const rules = await callServer('adminGetPhase1GenderRules');
+    const rules = await callAdminServer('adminGetPhase1GenderRules');
     document.getElementById('phase1Rule1').checked = !!rules.rule1;
     document.getElementById('phase1Rule2').checked = !!rules.rule2;
     document.getElementById('phase1Rule3').checked = !!rules.rule3;
@@ -303,7 +329,7 @@
   }
 
   async function loadPhase1BLRule() {
-    const enabled = await callServer('adminGetPhase1BLRule');
+    const enabled = await callAdminServer('adminGetPhase1BLRule');
     document.getElementById('phase1BLRule').checked = !!enabled;
     document.getElementById('phase1BLRuleStatus').textContent =
       'Regla BL: ' + (enabled ? 'Activada' : 'Desactivada');
@@ -315,7 +341,7 @@
     const enabled = document.getElementById('phase1BLRule').checked;
     setButtonLoading(button, 'Guardando regla BL...');
     try {
-      const saved = await callServer('adminSavePhase1BLRule', enabled);
+      const saved = await callAdminServer('adminSavePhase1BLRule', enabled);
       document.getElementById('phase1BLRule').checked = !!saved;
       document.getElementById('phase1BLRuleStatus').textContent =
         'Regla BL: ' + (saved ? 'Activada' : 'Desactivada');
@@ -337,7 +363,7 @@
     };
     setButtonLoading(button, 'Guardando reglas...');
     try {
-      const saved = await callServer('adminSavePhase1GenderRules', settings);
+      const saved = await callAdminServer('adminSavePhase1GenderRules', settings);
       document.getElementById('phase1Rule1').checked = !!saved.rule1;
       document.getElementById('phase1Rule2').checked = !!saved.rule2;
       document.getElementById('phase1Rule3').checked = !!saved.rule3;
@@ -489,7 +515,7 @@
     const button = document.getElementById('saveTieBreaksButton');
     setButtonLoading(button, 'Guardando posiciones...');
     try {
-      const result = await callServer('adminSaveManualTieBreaks', entries);
+      const result = await callAdminServer('adminSaveManualTieBreaks', entries);
       DATA = result.data;
       render();
       activate('clasificacion');
@@ -550,8 +576,8 @@
     if (!playerName) { showMessage('Escribe el nombre del jugador.', true); return; }
     setButtonLoading(button, 'Asignando...');
     try {
-      const result = await callServer('savePendingPlayer', matchId, side, playerName);
-      DATA = result.data || await callServer(window.IS_ADMIN ? 'adminGetKnockoutManagementData' : 'getPublicTournamentData');
+      const result = await callAdminServer('savePendingPlayer', matchId, side, playerName);
+      DATA = result.data || await (window.IS_ADMIN ? callAdminServer('adminGetKnockoutManagementData') : callServer('getPublicTournamentData'));
       render();
       activate('eliminatorias');
       showMessage('Jugador asignado correctamente. Ya puedes guardar el resultado del partido.');
@@ -607,8 +633,8 @@
     setButtonLoading(button, 'Guardando resultados...');
     try {
       const method = window.IS_ADMIN ? 'adminSaveScoreMultiple' : 'savePublicScoreMultiple';
-      const response = await callServer(method, type, results);
-      DATA = response.data || await callServer(window.IS_ADMIN ? 'adminGetKnockoutManagementData' : 'getPublicTournamentData');
+      const response = await (window.IS_ADMIN ? callAdminServer(method, type, results) : callServer(method, type, results));
+      DATA = response.data || await (window.IS_ADMIN ? callAdminServer('adminGetKnockoutManagementData') : callServer('getPublicTournamentData'));
       render();
       activate(type === 'FASE1' ? 'fase1' : 'eliminatorias');
       const savedCount = Number(response.savedCount);
@@ -631,8 +657,8 @@
     if(s1==='' || s2===''){ showMessage('Introduce los dos marcadores.',true); return; }
     setButtonLoading(btn, 'Guardando...');
     try {
-      const result=await callServer(window.IS_ADMIN ? 'adminSaveResult' : 'savePublicResult',type,id,Number(s1),Number(s2));
-      DATA=window.IS_ADMIN ? await callServer('adminGetKnockoutManagementData') : result.data; render(); showMessage('Resultado guardado.');
+      const result=await (window.IS_ADMIN ? callAdminServer('adminSaveResult',type,id,Number(s1),Number(s2)) : callServer('savePublicResult',type,id,Number(s1),Number(s2)));
+      DATA=window.IS_ADMIN ? await callAdminServer('adminGetKnockoutManagementData') : result.data; render(); showMessage('Resultado guardado.');
     } catch(e) { showMessage(e.message || String(e),true); }
     finally { clearButtonLoading(btn); }
   }
@@ -641,7 +667,7 @@
     if(!window.IS_ADMIN){ showMessage('No tienes permisos de administrador.',true); return; }
     setButtonLoading(button, 'Procesando...');
     try {
-      const result=await callServer(fn);
+      const result=await callAdminServer(fn);
       DATA=result;
       render();
       showMessage(successText);
@@ -656,23 +682,103 @@
     await adminAction('adminNewTournament','Nuevo torneo preparado',button);
   }
 
-  async function load() {
-    renderNav();
-    if(window.ADMIN_REQUESTED && !window.IS_ADMIN){
-      document.getElementById('loading').textContent='Acceso de administrador no autorizado.';
-      return;
-    }
+  async function showAdminLogin(message) {
+    window.IS_ADMIN = false;
+    ADMIN_TOKEN = '';
+    document.getElementById('nav').style.display = 'none';
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('adminLogin').style.display = 'block';
+    if (message) document.getElementById('adminLoginError').textContent = message;
+  }
+
+  async function submitAdminLogin(event) {
+    event.preventDefault();
+    const button = document.getElementById('adminLoginButton');
+    const username = document.getElementById('adminUsername').value.trim();
+    const passwordInput = document.getElementById('adminPassword');
+    const password = passwordInput.value;
+    const error = document.getElementById('adminLoginError');
+    error.textContent = '';
+    setButtonLoading(button, 'Comprobando...');
     try {
-      DATA=await callServer(window.IS_ADMIN ? 'adminGetKnockoutManagementData' : 'getPublicTournamentData');
+      const result = await callServer('loginAdmin', username, password);
+      ADMIN_TOKEN = result.token;
+      sessionStorage.setItem('tournamentAdminToken', ADMIN_TOKEN);
+      passwordInput.value = '';
+      window.IS_ADMIN = true;
+      document.getElementById('adminLogin').style.display = 'none';
+      document.getElementById('nav').style.display = '';
+      if (!tabs.some(tab => tab[0] === 'admin')) tabs.push(['admin','⚙️ Administración']);
+      await loadAdminData();
+    } catch (e) {
+      error.textContent = e.message || String(e);
+    } finally {
+      clearButtonLoading(button);
+    }
+  }
+
+  async function logoutAdmin() {
+    const token = ADMIN_TOKEN;
+    sessionStorage.removeItem('tournamentAdminToken');
+    ADMIN_TOKEN = '';
+    window.IS_ADMIN = false;
+    try { if (token) await callServer('logoutAdmin', token); } catch (e) {}
+    window.location.reload();
+  }
+
+  async function loadAdminData() {
+    DATA = await callAdminServer('adminGetKnockoutManagementData');
+    render();
+    activate('admin');
+    const status = await callAdminServer('getAdminStatus');
+    document.getElementById('adminStatus').textContent = 'Sesión iniciada como: ' + status.username;
+    await loadPhase1GenderRules();
+    await loadPhase1BLRule();
+  }
+
+  async function load() {
+    if (window.ADMIN_REQUESTED) {
+      const storedToken = sessionStorage.getItem('tournamentAdminToken') || '';
+      if (storedToken) {
+        try {
+          const status = await callServer('validateAdminSession', storedToken);
+          if (status && status.valid) {
+            ADMIN_TOKEN = storedToken;
+            window.IS_ADMIN = true;
+          } else {
+            sessionStorage.removeItem('tournamentAdminToken');
+          }
+        } catch (e) {
+          sessionStorage.removeItem('tournamentAdminToken');
+        }
+      }
+      if (!window.IS_ADMIN) {
+        await showAdminLogin();
+        return;
+      }
+    }
+
+    renderNav();
+    try {
+      DATA = window.IS_ADMIN
+        ? await callAdminServer('adminGetKnockoutManagementData')
+        : await callServer('getPublicTournamentData');
       render();
       activate(window.IS_ADMIN ? 'admin' : 'resumen');
-      if(window.IS_ADMIN){
-        const status=await callServer('getAdminStatus');
-        document.getElementById('adminStatus').textContent='Administrador identificado: '+status.email;
+      if (window.IS_ADMIN) {
+        const status = await callAdminServer('getAdminStatus');
+        document.getElementById('adminStatus').textContent = 'Sesión iniciada como: ' + status.username;
         await loadPhase1GenderRules();
-    await loadPhase1BLRule();
+        await loadPhase1BLRule();
       }
-    } catch(e){ document.getElementById('loading').textContent='No se ha podido cargar el torneo: '+(e.message||e); }
+    } catch (e) {
+      if (window.ADMIN_REQUESTED) {
+        sessionStorage.removeItem('tournamentAdminToken');
+        await showAdminLogin(e.message || String(e));
+      } else {
+        document.getElementById('loading').textContent = 'No se ha podido cargar el torneo: ' + (e.message || e);
+      }
+    }
   }
   load();
 </script>
