@@ -35,7 +35,13 @@
     .tie-pending { color:#9a6700; font-weight:700; }
     .tie-resolved { color:#18794e; font-weight:700; }
     .save { border:0; border-radius:7px; padding:7px 10px; background:var(--accent); color:#fff; cursor:pointer; }
-    .save:disabled { opacity:.5; cursor:wait; }
+    .save:disabled { opacity:.75; cursor:wait; }
+    .save.is-loading { display:inline-flex; align-items:center; justify-content:center; gap:8px; }
+    .button-spinner { width:14px; height:14px; border:2px solid rgba(255,255,255,.4); border-top-color:#fff; border-radius:50%; display:inline-block; animation:button-spin .7s linear infinite; }
+    @keyframes button-spin { to { transform:rotate(360deg); } }
+    #backToTop { position:fixed; right:20px; bottom:20px; z-index:30; width:46px; height:46px; border:0; border-radius:50%; background:#1f6feb; color:#fff; font-size:23px; line-height:1; box-shadow:0 3px 12px rgba(0,0,0,.25); cursor:pointer; display:none; }
+    #backToTop:hover { background:#1558bd; }
+    #backToTop:focus-visible { outline:3px solid #9cc2ff; outline-offset:3px; }
     .msg { margin:10px 0; padding:10px 12px; border-radius:9px; background:#eef6ff; display:none; }
     .msg.error { background:#fff0f0; color:#9b1c1c; }
     .pair { padding:10px 0; border-bottom:1px solid var(--border); }
@@ -68,19 +74,57 @@
       <h3>Control del torneo</h3>
       <div class="muted" style="margin-bottom:12px">Estas acciones solo funcionan con tu cuenta de administrador.</div>
       <div style="display:flex;flex-wrap:wrap;gap:8px">
-        <button class="save" onclick="adminAction('adminGeneratePhase1','Fase 1 generada')">🎲 Generar Fase 1</button>
-        <button class="save" onclick="adminAction('adminUpdateStandings','Clasificación actualizada')">📊 Actualizar clasificación</button>
-        <button class="save" onclick="adminAction('adminGenerateGoldSilver','ORO / PLATA generados')">🏆 Generar ORO / PLATA</button>
-        <button class="save" onclick="adminAction('adminGenerateKnockout','Eliminatorias generadas')">⚔️ Generar eliminatorias</button>
-        <button class="save" onclick="adminAction('adminFinishTournament','Torneo finalizado y guardado en histórico')">💾 Finalizar torneo</button>
-        <button class="save" onclick="adminNewTournament()">🧹 Nuevo torneo</button>
+        <button class="save" onclick="adminAction('adminGeneratePhase1','Fase 1 generada',this)">🎲 Generar Fase 1</button>
+        <button class="save" onclick="adminAction('adminUpdateStandings','Clasificación actualizada',this)">📊 Actualizar clasificación</button>
+        <button class="save" onclick="adminAction('adminGenerateGoldSilver','ORO / PLATA generados',this)">🏆 Generar ORO / PLATA</button>
+        <button class="save" onclick="adminAction('adminGenerateKnockout','Eliminatorias generadas',this)">⚔️ Generar eliminatorias</button>
+        <button class="save" onclick="adminAction('adminFinishTournament','Torneo finalizado y guardado en histórico',this)">💾 Finalizar torneo</button>
+        <button class="save" onclick="adminNewTournament(this)">🧹 Nuevo torneo</button>
+      </div>
+    </div>
+    <div class="card" style="margin-bottom:14px">
+      <h3>Reglas de género · Fase 1</h3>
+      <div class="muted" style="margin-bottom:12px">Puedes activar cada regla por separado. Los cambios se guardan y se aplican al generar la Fase 1 o al incorporar jugadores. No afectan a ORO / PLATA ni a las eliminatorias.</div>
+      <label style="display:flex;gap:10px;align-items:flex-start;margin:10px 0">
+        <input id="phase1Rule1" type="checkbox" style="margin-top:3px">
+        <span><strong>Regla 1:</strong> una pareja formada por dos chicas solo puede enfrentarse a otra pareja formada por dos chicas.</span>
+      </label>
+      <label style="display:flex;gap:10px;align-items:flex-start;margin:10px 0">
+        <input id="phase1Rule2" type="checkbox" style="margin-top:3px">
+        <span><strong>Regla 2:</strong> una chica siempre debe enfrentarse al menos a otra chica. Una pareja de dos chicos no puede enfrentarse a un equipo que tenga chicas.</span>
+      </label>
+      <label style="display:flex;gap:10px;align-items:flex-start;margin:10px 0">
+        <input id="phase1Rule3" type="checkbox" style="margin-top:3px">
+        <span><strong>Regla 3:</strong> cada chica debe jugar al menos un partido de chicas contra chicas (cuatro chicas en el mismo partido).</span>
+      </label>
+      <div class="muted" id="phase1RulesStatus" style="margin:8px 0">Cargando reglas...</div>
+      <button class="save" id="savePhase1RulesButton" onclick="savePhase1GenderRules()">Guardar reglas</button>
+    </div>
+    <div class="card" style="margin-bottom:14px">
+      <h3>Regla BL · Fase 1</h3>
+      <div class="muted" style="margin-bottom:12px">Si está activada, cada jugador sin BL puede jugar como máximo un partido con un compañero BL y, de forma independiente, como máximo un partido contra un equipo que tenga algún jugador BL. Los jugadores con BL no tienen estas limitaciones. Se aplica al generar la Fase 1 y al incorporar jugadores.</div>
+      <label style="display:flex;gap:10px;align-items:flex-start;margin:10px 0">
+        <input id="phase1BLRule" type="checkbox" style="margin-top:3px">
+        <span><strong>Aplicar restricciones BL</strong></span>
+      </label>
+      <div class="muted" id="phase1BLRuleStatus" style="margin:8px 0">Cargando regla BL...</div>
+      <button class="save" id="savePhase1BLRuleButton" onclick="savePhase1BLRule()">Guardar regla BL</button>
+    </div>
+    <div class="card" style="margin-bottom:14px">
+      <h3>Incorporar jugador a Fase 1</h3>
+      <div class="muted" style="margin-bottom:10px">Añade un participante después de generar los partidos. Se redistribuirán los partidos necesarios para mantener el mismo número de encuentros por jugador. Solo se permite antes de introducir resultados.</div>
+      <div id="phase1PlayerCounts" class="muted" style="margin-bottom:10px">Todavía no hay partidos generados.</div>
+      <div id="phase1AffectedMatches" style="display:none;margin:12px 0;padding:12px;background:#f0f7ff;border:1px solid #cfe2ff;border-radius:9px"></div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">
+        <input id="newPhase1Player" type="text" placeholder="Nombre del nuevo jugador" style="flex:1;min-width:210px;padding:9px;border:1px solid #cbd2da;border-radius:7px">
+        <button class="save" id="addPhase1PlayerButton" onclick="addPhase1Player()">➕ Añadir y equilibrar Fase 1</button>
       </div>
     </div>
     <div class="card">
       <h3>Estado</h3>
       <div id="adminStatus" class="muted">Comprobando cuenta...</div>
     </div>
-  </section>
+      </section>
 
   <section id="resumen" class="view">
     <h2>Resumen</h2>
@@ -89,7 +133,8 @@
 
   <section id="fase1" class="view">
     <h2>Fase 1</h2>
-    <div class="muted">Puedes introducir o corregir el resultado de cada partido.</div>
+    <div class="muted">Puedes introducir o corregir resultados individualmente o guardar todos los marcadores introducidos de una sola vez.</div>
+    <div style="margin:10px 0"><button class="save" id="saveAllPhase1Button" onclick="saveAllScores('FASE1')">💾 Guardar todos los resultados de Fase 1</button></div>
     <div class="scroll" style="margin-top:10px"><table><thead><tr><th>#</th><th>Pista</th><th>Ronda</th><th>Equipo 1</th><th>Equipo 2</th><th>Resultado</th><th></th></tr></thead><tbody id="fase1Body"></tbody></table></div>
   </section>
 
@@ -119,9 +164,11 @@
   <section id="eliminatorias" class="view">
     <h2>Eliminatorias</h2>
     <div class="muted">Los resultados de las eliminatorias también pueden introducirse desde aquí.</div>
+    <div style="margin:10px 0"><button class="save" id="saveAllKnockoutButton" onclick="saveAllScores('KO')">💾 Guardar todos los resultados de eliminatorias</button></div>
     <div id="koContent" style="margin-top:12px"></div>
   </section>
 </main>
+<button id="backToTop" type="button" aria-label="Volver arriba" title="Volver arriba" onclick="scrollToTop()">↑</button>
 
 <script>
   let DATA = null;
@@ -144,6 +191,29 @@
       google.script.run.withSuccessHandler(resolve).withFailureHandler(reject)[name](...args);
     });
   }
+  function setButtonLoading(button, loadingText) {
+    if (!button) return;
+    if (!button.dataset.originalHtml) button.dataset.originalHtml = button.innerHTML;
+    button.disabled = true;
+    button.classList.add('is-loading');
+    button.innerHTML = '<span class="button-spinner" aria-hidden="true"></span><span>' +
+      esc(loadingText || 'Procesando...') + '</span>';
+  }
+  function clearButtonLoading(button) {
+    if (!button) return;
+    if (button.dataset.originalHtml) button.innerHTML = button.dataset.originalHtml;
+    delete button.dataset.originalHtml;
+    button.classList.remove('is-loading');
+    button.disabled = false;
+  }
+  function scrollToTop() {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+  function updateBackToTopVisibility() {
+    const button = document.getElementById('backToTop');
+    if (button) button.style.display = window.scrollY > 300 ? 'block' : 'none';
+  }
+  window.addEventListener('scroll', updateBackToTopVisibility, { passive: true });
   function renderNav() {
     const nav=document.getElementById('nav');
     nav.innerHTML=tabs.map((t,i)=>`<button class="${i===0?'active':''}" data-view="${t[0]}">${t[1]}</button>`).join('');
@@ -170,6 +240,157 @@
       <div class="card"><div class="muted">Última actualización</div><div class="stat" style="font-size:18px">${new Date(DATA.generatedAt).toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'})}</div></div>`;
 
     renderFase1(); renderClasif(); renderPairs(); renderKO();
+    if (window.IS_ADMIN) renderAdminPhase1Counts();
+
+  }
+
+  function renderAdminPhase1Counts() {
+    const counts = new Map();
+    (DATA.phase1 || []).forEach(match => {
+      [match.team1[0], match.team1[1], match.team2[0], match.team2[1]].forEach(player => {
+        const name = String(player || '').trim();
+        if (name) counts.set(name, (counts.get(name) || 0) + 1);
+      });
+    });
+    const values = Array.from(counts.entries());
+    const target = document.getElementById('phase1PlayerCounts');
+    if (target) target.textContent = values.length
+      ? 'Partidos actuales por jugador: ' + values.map(([name, count]) => name + ': ' + count).join(' · ')
+      : 'Todavía no hay partidos generados.';
+  }
+
+  async function addPhase1Player() {
+    if (!window.IS_ADMIN) { showMessage('No tienes permisos de administrador.', true); return; }
+    const input = document.getElementById('newPhase1Player');
+    const button = document.getElementById('addPhase1PlayerButton');
+    const name = input.value.trim();
+    if (!name) { showMessage('Escribe el nombre del jugador.', true); return; }
+    const genderAnswer = prompt('Género del jugador (Chico o Chica). Puedes dejarlo vacío si las reglas están desactivadas:');
+    if (genderAnswer === null) return;
+    const gender = genderAnswer.trim();
+    if (gender && !/^(chico|chica)$/i.test(gender)) { showMessage('El género debe ser Chico o Chica, o dejarse vacío.', true); return; }
+    const blAnswer = prompt('¿Este jugador debe tener marca BL? Escribe X para marcarlo o deja vacío para no marcarlo:');
+    if (blAnswer === null) return;
+    const bl = blAnswer.trim().toUpperCase() === 'X';
+    if (blAnswer.trim() && !bl) { showMessage('La marca BL debe ser X o dejarse vacía.', true); return; }
+    if (!confirm('Se redistribuirán algunos partidos de Fase 1. Esta operación solo está permitida antes de introducir resultados. ¿Continuar?')) return;
+    setButtonLoading(button, 'Añadiendo jugador...');
+    try {
+      const result = await callServer('adminAddPhase1Player', { name: name, gender: gender, bl: bl });
+      DATA = result.data;
+      input.value = '';
+      render();
+      renderPhase1AffectedMatches(result);
+      activate('admin');
+      showMessage('Jugador añadido. Partidos modificados: ' + result.modifiedMatches.length +
+        '. Partidos nuevos: ' + result.addedMatches.length + '.');
+    } catch (e) {
+      showMessage(e.message || String(e), true);
+    } finally {
+      clearButtonLoading(button);
+    }
+  }
+
+  async function loadPhase1GenderRules() {
+    const rules = await callServer('adminGetPhase1GenderRules');
+    document.getElementById('phase1Rule1').checked = !!rules.rule1;
+    document.getElementById('phase1Rule2').checked = !!rules.rule2;
+    document.getElementById('phase1Rule3').checked = !!rules.rule3;
+    document.getElementById('phase1RulesStatus').textContent =
+      'Regla 1: ' + (rules.rule1 ? 'Activada' : 'Desactivada') +
+      ' · Regla 2: ' + (rules.rule2 ? 'Activada' : 'Desactivada') +
+      ' · Regla 3: ' + (rules.rule3 ? 'Activada' : 'Desactivada');
+  }
+
+  async function loadPhase1BLRule() {
+    const enabled = await callServer('adminGetPhase1BLRule');
+    document.getElementById('phase1BLRule').checked = !!enabled;
+    document.getElementById('phase1BLRuleStatus').textContent =
+      'Regla BL: ' + (enabled ? 'Activada' : 'Desactivada');
+  }
+
+  async function savePhase1BLRule() {
+    if (!window.IS_ADMIN) { showMessage('No tienes permisos de administrador.', true); return; }
+    const button = document.getElementById('savePhase1BLRuleButton');
+    const enabled = document.getElementById('phase1BLRule').checked;
+    setButtonLoading(button, 'Guardando regla BL...');
+    try {
+      const saved = await callServer('adminSavePhase1BLRule', enabled);
+      document.getElementById('phase1BLRule').checked = !!saved;
+      document.getElementById('phase1BLRuleStatus').textContent =
+        'Regla BL: ' + (saved ? 'Activada' : 'Desactivada');
+      showMessage('Regla BL guardada.');
+    } catch (e) {
+      showMessage(e.message || String(e), true);
+    } finally {
+      clearButtonLoading(button);
+    }
+  }
+
+  async function savePhase1GenderRules() {
+    if (!window.IS_ADMIN) { showMessage('No tienes permisos de administrador.', true); return; }
+    const button = document.getElementById('savePhase1RulesButton');
+    const settings = {
+      rule1: document.getElementById('phase1Rule1').checked,
+      rule2: document.getElementById('phase1Rule2').checked,
+      rule3: document.getElementById('phase1Rule3').checked
+    };
+    setButtonLoading(button, 'Guardando reglas...');
+    try {
+      const saved = await callServer('adminSavePhase1GenderRules', settings);
+      document.getElementById('phase1Rule1').checked = !!saved.rule1;
+      document.getElementById('phase1Rule2').checked = !!saved.rule2;
+      document.getElementById('phase1Rule3').checked = !!saved.rule3;
+      document.getElementById('phase1RulesStatus').textContent =
+        'Regla 1: ' + (saved.rule1 ? 'Activada' : 'Desactivada') +
+        ' · Regla 2: ' + (saved.rule2 ? 'Activada' : 'Desactivada') +
+        ' · Regla 3: ' + (saved.rule3 ? 'Activada' : 'Desactivada');
+      showMessage('Reglas de Fase 1 guardadas.');
+    } catch (e) {
+      showMessage(e.message || String(e), true);
+    } finally {
+      clearButtonLoading(button);
+    }
+  }
+
+  function renderPhase1AffectedMatches(result) {
+    const container = document.getElementById('phase1AffectedMatches');
+    if (!container) return;
+    const matches = result.affectedMatches || [];
+    if (!matches.length) {
+      container.style.display = 'none';
+      container.innerHTML = '';
+      return;
+    }
+
+    const team = players => (players || []).map(esc).join(' + ');
+    container.innerHTML = `
+      <strong>Partidos afectados al incorporar a ${esc(result.newPlayer)}</strong>
+      <div class="muted" style="margin:5px 0 10px">
+        ${result.modifiedMatches.length} partidos modificados y ${result.addedMatches.length} partidos nuevos.
+      </div>
+      <div class="scroll">
+        <table style="min-width:620px">
+          <thead><tr><th>Partido</th><th>Tipo</th><th>Antes</th><th>Después</th></tr></thead>
+          <tbody>${matches.map(match => {
+            if (match.type === 'added') {
+              return `<tr>
+                <td><strong>${esc(match.id)}</strong></td>
+                <td><span class="badge">Nuevo</span></td>
+                <td class="muted">—</td>
+                <td>${team(match.afterTeam1)} <strong>VS</strong> ${team(match.afterTeam2)}</td>
+              </tr>`;
+            }
+            return `<tr>
+              <td><strong>${esc(match.id)}</strong></td>
+              <td><span class="badge">Modificado</span></td>
+              <td>${team(match.beforeTeam1)} <strong>VS</strong> ${team(match.beforeTeam2)}</td>
+              <td>${team(match.afterTeam1)} <strong>VS</strong> ${team(match.afterTeam2)}</td>
+            </tr>`;
+          }).join('')}</tbody>
+        </table>
+      </div>`;
+    container.style.display = 'block';
   }
 
   function scoreEditor(type, id, s1, s2) {
@@ -266,7 +487,7 @@
     if (!inputs.length) { showMessage('No hay posiciones pendientes de edición. Comprueba que has actualizado la clasificación.', true); return; }
     const entries = inputs.map(input => ({ player: input.dataset.player, position: input.value.trim() }));
     const button = document.getElementById('saveTieBreaksButton');
-    if (button) button.disabled = true;
+    setButtonLoading(button, 'Guardando posiciones...');
     try {
       const result = await callServer('adminSaveManualTieBreaks', entries);
       DATA = result.data;
@@ -276,8 +497,7 @@
     } catch (e) {
       showMessage(e.message || String(e), true);
     } finally {
-      const currentButton = document.getElementById('saveTieBreaksButton');
-      if (currentButton) currentButton.disabled = false;
+      clearButtonLoading(button);
     }
   }
 
@@ -303,15 +523,105 @@
       return `<div class="card" style="margin-bottom:14px"><h3>${group}</h3>` + rounds.map(round=>{
         const rr=rows.filter(r=>r.round===round);
         return `<div style="margin-top:12px"><strong>${esc(round)}</strong><div class="scroll"><table style="margin-top:6px"><thead><tr><th>Partido</th><th>Pareja 1</th><th>Pareja 2</th><th>Resultado</th><th>Ganador</th></tr></thead><tbody>`+
-          rr.map(m=>`<tr><td>${esc(m.id)}</td><td>${esc(m.pair1)}</td><td>${esc(m.pair2)}</td><td>${scoreEditor('KO',m.id,m.score1,m.score2)}</td><td>${esc(m.winner || winnerFromScore(m))}</td></tr>`).join('')+
+          rr.map(m=>`<tr><td>${esc(m.id)}</td><td>${pendingPlayerEditor(m.id,1,m.pair1)}</td><td>${pendingPlayerEditor(m.id,2,m.pair2)}</td><td>${scoreEditor('KO',m.id,m.score1,m.score2)}</td><td>${esc(m.winner || winnerFromScore(m))}</td></tr>`).join('')+
           `</tbody></table></div></div>`;
       }).join('')+'</div>';
     }).join('');
   }
 
+  function pendingPlayerEditor(matchId, side, pairValue) {
+    const pair = String(pairValue || '');
+    if (!window.IS_ADMIN) return esc(pair);
+    if (!pair.includes('PENDIENTE')) return esc(pair);
+    const inputId = 'KO_PENDING_' + matchId + '_' + side;
+    return `<div>${esc(pair)}</div>
+      <div style="display:flex;gap:5px;align-items:center;margin-top:7px;min-width:190px">
+        <input id="${esc(inputId)}" type="text" placeholder="Nombre del jugador"
+          aria-label="Jugador pendiente del partido ${esc(matchId)}"
+          style="min-width:0;width:100%;padding:7px;border:1px solid #cbd2da;border-radius:7px">
+        <button class="save" onclick="assignPendingPlayer('${esc(matchId)}',${side})">Asignar</button>
+      </div>`;
+  }
+
+  async function assignPendingPlayer(matchId, side) {
+    const input = document.getElementById('KO_PENDING_' + matchId + '_' + side);
+    const button = input && input.parentElement.querySelector('button');
+    const playerName = input ? input.value.trim() : '';
+    if (!playerName) { showMessage('Escribe el nombre del jugador.', true); return; }
+    setButtonLoading(button, 'Asignando...');
+    try {
+      const result = await callServer('savePendingPlayer', matchId, side, playerName);
+      DATA = result.data || await callServer(window.IS_ADMIN ? 'adminGetKnockoutManagementData' : 'getPublicTournamentData');
+      render();
+      activate('eliminatorias');
+      showMessage('Jugador asignado correctamente. Ya puedes guardar el resultado del partido.');
+    } catch (e) {
+      showMessage(e.message || String(e), true);
+      clearButtonLoading(button);
+    }
+  }
   function winnerFromScore(m){
     if(m.score1==='' || m.score2==='' || m.score1==null || m.score2==null) return '';
     const a=Number(m.score1), b=Number(m.score2); if(a===b) return ''; return a>b?m.pair1:m.pair2;
+  }
+
+  async function saveAllScores(type) {
+    const buttonId = type === 'FASE1' ? 'saveAllPhase1Button' : 'saveAllKnockoutButton';
+    const button = document.getElementById(buttonId);
+    const prefix = type === 'FASE1' ? 'FASE1_' : 'KO_';
+    const inputs = Array.from(document.querySelectorAll('input[id^="' + prefix + '"]'));
+    const resultsById = new Map();
+
+    inputs.forEach(input => {
+      const match = input.id.match(type === 'FASE1' ? /^FASE1_(.+)_([12])$/ : /^KO_(.+)_([12])$/);
+      if (!match) return;
+      const id = match[1];
+      if (!resultsById.has(id)) resultsById.set(id, {});
+      resultsById.get(id)['score' + match[2]] = input.value.trim();
+    });
+
+    const results = [];
+    for (const [id, scores] of resultsById.entries()) {
+      const score1Text = scores.score1 || '';
+      const score2Text = scores.score2 || '';
+      if (score1Text === '' && score2Text === '') continue;
+      if (score1Text === '' || score2Text === '') {
+        showMessage('Completa los dos marcadores del partido ' + id + '.', true);
+        return;
+      }
+      const score1 = Number(score1Text);
+      const score2 = Number(score2Text);
+      if (!Number.isInteger(score1) || !Number.isInteger(score2) || score1 < 0 || score2 < 0 || score1 === score2) {
+        showMessage('Revisa los marcadores del partido ' + id + '. Deben ser enteros, no negativos y sin empate.', true);
+        return;
+      }
+      results.push({ id: id, score1: score1, score2: score2 });
+    }
+
+    if (!results.length) {
+      showMessage('No hay resultados completos para guardar.', true);
+      return;
+    }
+    if (!confirm('Se guardarán ' + results.length + ' resultados de una sola vez. ¿Continuar?')) return;
+
+    setButtonLoading(button, 'Guardando resultados...');
+    try {
+      const method = window.IS_ADMIN ? 'adminSaveScoreMultiple' : 'savePublicScoreMultiple';
+      const response = await callServer(method, type, results);
+      DATA = response.data || await callServer(window.IS_ADMIN ? 'adminGetKnockoutManagementData' : 'getPublicTournamentData');
+      render();
+      activate(type === 'FASE1' ? 'fase1' : 'eliminatorias');
+      const savedCount = Number(response.savedCount);
+      if (savedCount !== results.length) {
+        showMessage('Aviso: se enviaron ' + results.length + ' resultados, pero el servidor confirmó ' + (Number.isFinite(savedCount) ? savedCount : 'un número desconocido') + '.', true);
+      } else {
+        showMessage('Se han guardado los ' + savedCount + ' resultados correctamente.');
+      }
+    } catch (e) {
+      showMessage(e.message || String(e), true);
+    } finally {
+      clearButtonLoading(button);
+    }
   }
 
   async function saveScore(type,id) {
@@ -319,15 +629,17 @@
     const btn=a.parentElement.querySelector('button');
     const s1=a.value, s2=b.value;
     if(s1==='' || s2===''){ showMessage('Introduce los dos marcadores.',true); return; }
-    btn.disabled=true;
+    setButtonLoading(btn, 'Guardando...');
     try {
       const result=await callServer(window.IS_ADMIN ? 'adminSaveResult' : 'savePublicResult',type,id,Number(s1),Number(s2));
-      DATA=result.data; render(); showMessage('Resultado guardado.');
-    } catch(e) { showMessage(e.message || String(e),true); btn.disabled=false; }
+      DATA=window.IS_ADMIN ? await callServer('adminGetKnockoutManagementData') : result.data; render(); showMessage('Resultado guardado.');
+    } catch(e) { showMessage(e.message || String(e),true); }
+    finally { clearButtonLoading(btn); }
   }
 
-  async function adminAction(fn, successText) {
+  async function adminAction(fn, successText, button) {
     if(!window.IS_ADMIN){ showMessage('No tienes permisos de administrador.',true); return; }
+    setButtonLoading(button, 'Procesando...');
     try {
       const result=await callServer(fn);
       DATA=result;
@@ -335,12 +647,13 @@
       showMessage(successText);
       activate('admin');
     } catch(e) { showMessage(e.message || String(e),true); }
+    finally { clearButtonLoading(button); }
   }
 
-  async function adminNewTournament() {
+  async function adminNewTournament(button) {
     if(!window.IS_ADMIN){ showMessage('No tienes permisos de administrador.',true); return; }
     if(!confirm('¿Seguro que quieres limpiar el torneo actual? El histórico no se borrará.')) return;
-    await adminAction('adminNewTournament','Nuevo torneo preparado');
+    await adminAction('adminNewTournament','Nuevo torneo preparado',button);
   }
 
   async function load() {
@@ -350,12 +663,14 @@
       return;
     }
     try {
-      DATA=await callServer('getPublicTournamentData');
+      DATA=await callServer(window.IS_ADMIN ? 'adminGetKnockoutManagementData' : 'getPublicTournamentData');
       render();
       activate(window.IS_ADMIN ? 'admin' : 'resumen');
       if(window.IS_ADMIN){
         const status=await callServer('getAdminStatus');
         document.getElementById('adminStatus').textContent='Administrador identificado: '+status.email;
+        await loadPhase1GenderRules();
+    await loadPhase1BLRule();
       }
     } catch(e){ document.getElementById('loading').textContent='No se ha podido cargar el torneo: '+(e.message||e); }
   }

@@ -79,12 +79,13 @@ function savePublicResult(matchType, matchId, score1, score2) {
 
   const width = normalizedType === 'FASE1' ? 10 : 8;
   const rows = sh.getRange(2, 1, last - 1, width).getValues();
-  if(normalizedType === 'FASE 1') {
-    const rowIndex = rows.findIndex(r => String(r[0]) === id);
-  } else if(normalizedType === 'ELIMINATORIAS') {
-    const rowIndex = rows.findIndex(r => String(r[2]) === id);
+  let rowIndex = -1;
+  if (normalizedType === 'FASE1') {
+    rowIndex = rows.findIndex(r => String(r[0]) === id);
+  } else if (normalizedType === 'ELIMINATORIAS') {
+    rowIndex = rows.findIndex(r => String(r[2]) === id);
   }
-  
+
   if (rowIndex < 0) throw new Error('No se ha encontrado ese partido.');
 
   const row = rows[rowIndex];
@@ -112,6 +113,7 @@ function savePublicResult(matchType, matchId, score1, score2) {
  * This is intentionally public so the tournament can be completed from the web.
  */
 function savePendingPlayer(matchId, side, playerName) {
+  requireAdmin();
   const id = String(matchId || '').trim();
   const slot = Number(side);
   const name = String(playerName || '').trim();
@@ -197,134 +199,76 @@ function savePublicScoreMultiple(matchType, results) {
   );
 }
 function saveScoreMultiple(matchType, results) {
-
   const type = String(matchType || '').toUpperCase();
-
   if (!Array.isArray(results) || results.length === 0) {
     throw new Error('No hay resultados para guardar.');
   }
 
   const normalizedType = type === 'KO' || type === 'KNOCKOUT' ? 'ELIMINATORIAS' : type;
-
   const sheetName = normalizedType === 'FASE1' ? SHEETS.PHASE1 :
     normalizedType === 'ELIMINATORIAS' ? SHEETS.KNOCKOUT : null;
+  if (!sheetName) throw new Error('Tipo de partido no válido.');
 
-  if (!sheetName) {
-    throw new Error('Tipo de partido no válido.');
-  }
-
-  const sh =
-    SpreadsheetApp.getActive().getSheetByName(sheetName);
-  if (!sh) {
-    throw new Error('No existe la hoja de partidos.');
-  }
-
+  const sh = SpreadsheetApp.getActive().getSheetByName(sheetName);
+  if (!sh) throw new Error('No existe la hoja de partidos.');
   const lastRow = sh.getLastRow();
-  if (lastRow < 2) {
-    throw new Error('No hay partidos generados.');
-  }
+  if (lastRow < 2) throw new Error('No hay partidos generados.');
 
   const width = normalizedType === 'FASE1' ? 10 : 8;
-
   const rows = sh.getRange(2, 1, lastRow - 1, width).getValues();
+  const updates = [];
+  const seenIds = new Set();
 
   results.forEach(result => {
-
     const id = String(result.id || '').trim();
+    if (!id) throw new Error('Hay un resultado sin identificador de partido.');
+    if (seenIds.has(id)) throw new Error('El partido ' + id + ' aparece duplicado en la petición.');
+    seenIds.add(id);
 
     const s1 = Number(result.score1);
     const s2 = Number(result.score2);
-
-    if (!id) { return; }
-
-    if (!Number.isInteger(s1) || !Number.isInteger(s2) || s1 < 0 || s2 < 0) {
+    if (!Number.isInteger(s1) || !Number.isInteger(s2) || s1 < 0 || s2 < 0 || s1 === s2) {
       throw new Error('Marcador no válido en el partido ' + id);
     }
 
-    if (s1 === s2) {
-      throw new Error('El partido ' + id + ' no puede quedar empatado.');
-    }
-
-    let rowIndex = -1;
-    if (normalizedType === 'FASE1') {
-      rowIndex = rows.findIndex(row => String(row[0]) === id);
-    }
-    else if(normalizedType ==='ELIMINATORIAS') {
-      rowIndex = rows.findIndex(row => String(row[2]) === id);
-    } 
-    console.log('Actualizado');
-    if (rowIndex < 0) {
-      throw new Error('No se ha encontrado el partido ' + id);
-    }
-
-    const rowNumber = rowIndex + 2;
+    const rowIndex = normalizedType === 'FASE1'
+      ? rows.findIndex(row => String(row[0]) === id)
+      : rows.findIndex(row => String(row[2]) === id);
+    if (rowIndex < 0) throw new Error('No se ha encontrado el partido ' + id);
 
     const row = rows[rowIndex];
-
-    // ============================
-    // FASE 1
-    // ============================
-
-    if (normalizedType === 'FASE1') {
-      sh.getRange(rowNumber,9,1,2).setValues([[s1, s2]]);
+    if (normalizedType === 'ELIMINATORIAS' &&
+        (String(row[3]).includes('PENDIENTE') || String(row[4]).includes('PENDIENTE'))) {
+      throw new Error('Completa primero el jugador pendiente en el partido ' + id);
     }
 
-    // ============================
-    // ELIMINATORIAS
-    // ============================
-
-    else {
-      if (String(row[3]).includes('PENDIENTE') || String(row[4]).includes('PENDIENTE')) {
-        throw new Error('Completa primero el jugador pendiente en el partido ' +id);
-      }
-
-      sh.getRange(rowNumber,6,1,2).setValues([[s1, s2]]);
-
-      const winner =s1 > s2? String(row[3]): String(row[4]);
-
-      sh.getRange(rowNumber,8).setValue(winner);
-    }
+    updates.push({
+      id,
+      rowIndex,
+      score1: s1,
+      score2: s2,
+      winner: normalizedType === 'ELIMINATORIAS' ? (s1 > s2 ? String(row[3]) : String(row[4])) : ''
+    });
   });
 
-  // =====================================
-  // ACTUALIZAR CLASIFICACIÓN UNA VEZ
-  // =====================================
-
+  // One batch write for every submitted match.
   if (normalizedType === 'FASE1') {
+    const scoreValues = rows.map(row => [row[8], row[9]]);
+    updates.forEach(item => { scoreValues[item.rowIndex] = [item.score1, item.score2]; });
+    sh.getRange(2, 9, scoreValues.length, 2).setValues(scoreValues);
     updateStandings();
-  }
-
-  // =====================================
-  // ACTUALIZAR SIGUIENTES ELIMINATORIAS
-  // =====================================
-
-  if (normalizedType === 'ELIMINATORIAS') {
-    const updatedRows =sh.getRange(2,1,lastRow - 1,8).getValues();
-
-    results.forEach(result => {
-      const id = String(result.id || '').trim();
-
-      const rowIndex = updatedRows.findIndex(row => String(row[2]) === id);
-
-      if (rowIndex < 0) {
-        return;
-      }
-
-      const row = updatedRows[rowIndex];
-
-      const s1 = Number(result.score1);
-      const s2 = Number(result.score2);
-
-      const winner = s1 > s2 ? String(row[3]) : String(row[4]);
-
-      propagateKnockoutWinner_(id,winner);
-    });
+  } else {
+    const resultValues = rows.map(row => [row[5], row[6], row[7]]);
+    updates.forEach(item => { resultValues[item.rowIndex] = [item.score1, item.score2, item.winner]; });
+    sh.getRange(2, 6, resultValues.length, 3).setValues(resultValues);
+    updates.forEach(item => propagateKnockoutWinner_(item.id, item.winner));
   }
 
   SpreadsheetApp.flush();
-
   return {
     ok: true,
+    savedCount: updates.length,
+    savedMatchIds: updates.map(item => item.id),
     data: getPublicTournamentData()
   };
 }

@@ -52,6 +52,12 @@ function generatePhase1() {
   const ss = SpreadsheetApp.getActive();
   const cfg = getConfig();
   const players = getPlayers();
+  // Solo se exigen géneros completos cuando hay alguna regla activa.
+  const genderRules = getPhase1GenderRules_();
+  const genderMap = (genderRules.rule1 || genderRules.rule2 || genderRules.rule3)
+    ? getPhase1GenderMap_(players)
+    : new Map();
+  const blMap = getPhase1BLRule_() ? getPhase1BLMap_(players) : null;
   if (players.length < 4) throw new Error('Se necesitan al menos 4 players.');
   if (cfg.matchesPerPlayer < cfg.minimumMatches) throw new Error(`El mínimo de matches por player es ${cfg.minimumMatches}.`);
   if ((players.length * cfg.matchesPerPlayer) % 4 !== 0) {
@@ -59,8 +65,6 @@ function generatePhase1() {
   }
 
   const sh = ss.getSheetByName(SHEETS.PHASE1);
-  const old = sh.getLastRow();
-  if (old > 1) sh.getRange(2,1,old-1,10).clearContent();
 
   // Construcción global. Guardamos las pairs ya usadas en todas las rounds.
   const usedPairs = new Set();
@@ -69,49 +73,90 @@ function generatePhase1() {
   const counts = {};
   players.forEach(p => counts[p]=0);
 
-  // Reintentos completos para evitar bloqueos en combinaciones difíciles.
-  for (let attempt=0; attempt<1000; attempt++) {
-    usedPairs.clear();
-    schedule.length = 0;
-    players.forEach(p => counts[p]=0);
-    let ok = true;
-
-    for (let m=0; m<totalMatches; m++) {
-      const eligible = shuffle(players.filter(p => counts[p] < cfg.matchesPerPlayer));
-      if (eligible.length < 4) { ok=false; break; }
-
-      // Priorizamos players con más necesidad de matches.
-      eligible.sort((a,b) => counts[a]-counts[b] || Math.random()-0.5);
-
-      let found = null;
-      const tries = Math.min(500, Math.max(100, players.length*20));
-      for (let t=0;t<tries && !found;t++) {
-        const pool = shuffle(eligible.slice(0, Math.min(8, eligible.length)));
-        if (pool.length < 4) continue;
-        const s = pool.slice(0,4);
-        const forms = shuffle([
-          [[s[0],s[1]],[s[2],s[3]]],
-          [[s[0],s[2]],[s[1],s[3]]],
-          [[s[0],s[3]],[s[1],s[2]]]
+  if (cfg.matchesPerPlayer === 4 && players.length >= 6) {
+    // Construcción exacta para cuatro partidos por jugador, probando
+    // distintos órdenes hasta que todos los cruces cumplan las reglas activas.
+    let validSchedule = false;
+    for (let attempt = 0; attempt < 5000 && !validSchedule; attempt++) {
+      const orderedPlayers = shuffle(players);
+      const candidate = [];
+      const n = orderedPlayers.length;
+      for (let i = 0; i < n; i++) {
+        candidate.push([
+          [orderedPlayers[i], orderedPlayers[(i + 1) % n]],
+          [orderedPlayers[(i + 2) % n], orderedPlayers[(i + 4) % n]]
         ]);
-        for (const f of forms) {
-          const k1=pairKey(f[0][0],f[0][1]), k2=pairKey(f[1][0],f[1][1]);
-          if (!usedPairs.has(k1) && !usedPairs.has(k2)) { found=f; break; }
-        }
       }
-      if (!found) { ok=false; break; }
-      found.flat().forEach(p=>counts[p]++);
-      usedPairs.add(pairKey(found[0][0],found[0][1]));
-      usedPairs.add(pairKey(found[1][0],found[1][1]));
-      schedule.push(found);
+      if (validatePhase1GenderSchedule_(candidate, genderMap, genderRules).valid &&
+          (!blMap || validatePhase1BLSchedule_(candidate, blMap).valid)) {
+        schedule.push(...candidate);
+        validSchedule = true;
+      }
     }
+    if (!validSchedule) {
+      throw new Error('No he encontrado un calendario que cumpla las reglas de género y BL activas, manteniendo el reparto de partidos y sin repetir compañeros. Revisa la distribución de jugadores o prueba otra configuración.');
+    }
+    schedule.forEach(match => {
+      match.flat().forEach(player => counts[player]++);
+      usedPairs.add(pairKey(match[0][0], match[0][1]));
+      usedPairs.add(pairKey(match[1][0], match[1][1]));
+    });
+  } else {
+    // Construcción aleatoria para el resto de configuraciones.
+    let generated = false;
+    for (let attempt = 0; attempt < 1000 && !generated; attempt++) {
+      usedPairs.clear();
+      schedule.length = 0;
+      players.forEach(player => counts[player] = 0);
+      let ok = true;
 
-    if (ok && Object.values(counts).every(v=>v===cfg.matchesPerPlayer)) break;
-    if (attempt===999) throw new Error('No he encontrado una combinación válida. Prueba con otro número de matches por player o de participantes.');
+      for (let m = 0; m < totalMatches; m++) {
+        const eligible = shuffle(players.filter(player => counts[player] < cfg.matchesPerPlayer));
+        if (eligible.length < 4) { ok = false; break; }
+        eligible.sort((a, b) => counts[a] - counts[b] || Math.random() - 0.5);
+
+        let found = null;
+        const tries = Math.min(500, Math.max(100, players.length * 20));
+        for (let t = 0; t < tries && !found; t++) {
+          const pool = shuffle(eligible.slice(0, Math.min(8, eligible.length)));
+          if (pool.length < 4) continue;
+          const selected = pool.slice(0, 4);
+          const forms = shuffle([
+            [[selected[0], selected[1]], [selected[2], selected[3]]],
+            [[selected[0], selected[2]], [selected[1], selected[3]]],
+            [[selected[0], selected[3]], [selected[1], selected[2]]]
+          ]);
+          for (const form of forms) {
+            const key1 = pairKey(form[0][0], form[0][1]);
+            const key2 = pairKey(form[1][0], form[1][1]);
+            if (!usedPairs.has(key1) && !usedPairs.has(key2) &&
+                isPhase1GenderMatchValid_(form[0], form[1], genderMap, genderRules) &&
+                (!blMap || validatePhase1BLSchedule_(schedule.concat([form]), blMap).valid)) {
+              found = form;
+              break;
+            }
+          }
+        }
+        if (!found) { ok = false; break; }
+        found.flat().forEach(player => counts[player]++);
+        usedPairs.add(pairKey(found[0][0], found[0][1]));
+        usedPairs.add(pairKey(found[1][0], found[1][1]));
+        schedule.push(found);
+      }
+      generated = ok && Object.values(counts).every(value => value === cfg.matchesPerPlayer) &&
+        validatePhase1GenderSchedule_(schedule, genderMap, genderRules).valid &&
+        (!blMap || validatePhase1BLSchedule_(schedule, blMap).valid);
+    }
+    if (!generated) {
+      throw new Error('No he encontrado una combinación válida que cumpla el reparto de partidos, no repita compañeros y respete las reglas de género y BL activas. Prueba otra configuración.');
+    }
   }
 
   // Ordenamos aleatoriamente los matches y dejamos la court vacía para asignación manual.
   const rows = schedule.map((f,i)=>[i+1,'',Math.floor(i/cfg.courts)+1,f[0][0],f[0][1],'VS',f[1][0],f[1][1],'','']);
+  // Solo se sustituye el calendario anterior cuando ya existe uno válido.
+  const old = sh.getLastRow();
+  if (old > 1) sh.getRange(2,1,old-1,10).clearContent();
   sh.getRange(2,1,rows.length,10).setValues(rows);
   sh.getRange(2,2,rows.length,1).setBackground('#fff2cc');
   sh.getRange(2,9,rows.length,2).setBackground('#d9ead3');
