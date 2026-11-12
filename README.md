@@ -3,8 +3,19 @@
 Aplicación para organizar torneos de vóley playa 2 contra 2 mediante **Google Sheets, Google Apps Script y una Web App**. El número de participantes puede variar entre torneos.
 
 La administración configura el torneo, genera los partidos, registra resultados y gestiona las fases. La asignación de pistas se realiza manualmente.
+=======
+## Flujo de ramas
 
-## Cómo funciona la aplicación
+El desarrollo se organiza en tres niveles:
+- `dev`: rama estable de integración. Solo recibe cambios después de que hayan superado las pruebas y el usuario autorice la integración.
+- `feature/phase1-bl-aware-generator`: rama de implementación. Aquí se desarrollan y corrigen las funcionalidades del generador BL-aware.
+- `test/phase1-bl-aware-generator`: rama de pruebas. Parte de la rama `feature` y se utiliza para añadir pruebas automatizadas, ejecutar escenarios y corregir los problemas detectados durante la validación.
+
+Flujo previsto: `dev` → `feature` → `test` → revisión de resultados → integración autorizada en `dev`. No se deben mezclar cambios de prueba sin revisar en `dev`. Mantener `dev` intacta mientras el generador no esté validado.
+
+Las ramas `feature/phase1-bl-aware-generator` y `test/phase1-bl-aware-generator` se crearon desde `dev` y desde `feature`, respectivamente. La rama `test` parte del mismo estado de implementación que `feature` en el momento de su creación.
+
+## Estructura y desarrollo
 
 El torneo se organiza alrededor de estos bloques funcionales:
 
@@ -102,12 +113,42 @@ La generación de Fase 1 para 4 partidos por jugador utiliza en esta versión un
 
 Se ha observado un fallo con 29 jugadores, 4 partidos por jugador y 4 jugadores BL, incluso dejando activa únicamente la regla BL. La regla no debe relajarse para ocultar el problema. La mejora del algoritmo debe considerarse pendiente hasta que esté implementada y probada.
 
+
 ## Sincronización y despliegue
 
 El código de GitHub, el código del proyecto de Apps Script y la versión desplegada de la Web App son estados distintos. Actualizar una rama de GitHub no despliega automáticamente la aplicación.
 
 La sincronización prevista se realizará con `clasp` y/o GitHub Actions, separando el proyecto de Apps Script de pruebas del de producción. No se debe publicar en producción desde `features` ni desde `dev` sin la aprobación correspondiente.
+## Generación de Fase 1 con reglas BL
+
+La generación admite entre **3 y 5 partidos por jugador** y cualquier cantidad de jugadores marcados con BL. Cuando la regla BL está activada, `002_Phase1.gs` utiliza el solucionador general `generatePhase1ConstraintAware_()` de `013_Phase1BLGenerator.gs`.
+
+El algoritmo construye el calendario comprobando en cada partido:
+- Reparto de apariciones pendientes, hasta alcanzar exactamente el número configurado para cada jugador.
+- Ninguna pareja de compañeros repetida.
+- Para cada jugador sin BL, como máximo un partido con compañero BL.
+- Para cada jugador sin BL, como máximo un partido contra un equipo que contenga BL. Este contador es independiente del anterior.
+- Reglas de género activas; la regla de género 3 se valida sobre el calendario completo.
+
+El generador utiliza búsqueda con retroceso y límites de tiempo/nodos para evitar ejecuciones indefinidas. Si agota esos límites sin encontrar calendario, informa del fallo y conserva el calendario anterior. Por tanto, un fallo de búsqueda no demuestra por sí solo que el calendario sea matemáticamente imposible. La implementación debe probarse con diferentes tamaños de torneo, cantidades BL y configuraciones de género antes de considerarse validada.
 
 ## Contexto para asistentes de IA
 
 `ai-context.md` recoge decisiones funcionales, restricciones técnicas y precauciones que deben respetarse al continuar el desarrollo.
+=======
+Los cambios de código deben copiarse/sincronizarse con el proyecto de Apps Script y después desplegarse de nuevo como Web App para probarlos. Los cambios documentados en la rama de desarrollo no implican que estén ya desplegados ni validados en la hoja real.
+
+
+## Pruebas automatizadas de Fase 1
+
+En la rama `test/phase1-bl-aware-generator` está el archivo `014_Phase1BLGeneratorTests.gs`. Copia ese archivo junto con los archivos de producción `001_Utils.gs`, `012_TournamentRules.gs` y `013_Phase1BLGenerator.gs` en un proyecto de prueba de Apps Script.
+
+Desde el editor de Apps Script ejecuta:
+
+- `runPhase1BLGeneratorTests()`: pruebas de validadores BL, independencia de contadores, exención de jugadores BL, reglas de género y generación con 3, 4 y 5 partidos por jugador.
+- `runPhase1BLGeneratorStressTests()`: escenario ampliado de 29 jugadores, 4 partidos por jugador y 4 jugadores BL.
+
+Las pruebas utilizan datos sintéticos en memoria. No leen ni modifican hojas, propiedades del proyecto ni calendarios reales. Los resultados se muestran en el registro de ejecución; si falla una prueba, la función lanza una excepción al terminar para que el fallo sea visible.
+
+La búsqueda del generador tiene límites de tiempo y nodos. Por ello, un fallo en una prueba de generación significa que no se encontró solución dentro de esos límites; no demuestra por sí solo que el escenario sea matemáticamente imposible. Repetir una prueba puede dar resultados distintos porque el generador utiliza aleatoriedad.
+

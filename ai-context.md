@@ -102,18 +102,32 @@ La acción está protegida con `requireAdmin()`.
 - La configuración de reglas se carga al entrar en Administración y se guarda mediante llamadas a Apps Script.
 - Todas las acciones administrativas del backend deben comprobar permisos con `requireAdmin()`.
 
-## Estado del generador y limitación pendiente
+## Generador general de Fase 1 con BL
 
-En `002_Phase1.gs`, cuando hay exactamente 4 partidos por jugador y al menos 6 jugadores, se usa una construcción cíclica especial:
-- Se baraja el orden de jugadores.
-- Para cada índice se construye un partido con los jugadores de las posiciones `i`, `i+1`, `i+2` e `i+4` (índices cíclicos).
-- Se prueban hasta 5.000 órdenes aleatorios.
-- Se valida el calendario completo contra las reglas de género activas y, si está activada, contra la regla BL.
-- Si no se encuentra solución, se lanza un error y el calendario anterior no se reemplaza.
+`002_Phase1.gs` usa `generatePhase1ConstraintAware_()` de `013_Phase1BLGenerator.gs` siempre que la regla BL esté activada. No depende de una cantidad fija de jugadores BL ni de un único número de partidos.
 
-**Limitación conocida:** este procedimiento solo explora una familia restringida de calendarios. Agotar 5.000 intentos no demuestra que no exista una solución matemática; puede significar que el algoritmo no ha encontrado una dentro de los órdenes probados.
+Condiciones:
+- El número de partidos por jugador debe estar entre 3 y 5.
+- Cualquier número de jugadores puede tener la marca BL.
+- Se mantiene el requisito de que el total de participaciones sea divisible entre cuatro.
+- Se mantienen todas las reglas de género activas, el reparto exacto y la prohibición de repetir compañeros.
 
-Caso observado por el usuario: 29 jugadores, 4 partidos por jugador y 4 jugadores con BL marcado. La generación falla incluso al dejar activa únicamente la regla BL. La regla BL no debe relajarse para ocultar el problema. Queda pendiente mejorar la construcción del calendario para incorporar las restricciones BL durante la generación, conservando el reparto exacto y la prohibición de repetir compañeros. Esta mejora todavía **no está implementada**.
+Durante la búsqueda se comprueban las restricciones BL por partido:
+- Un jugador sin BL puede tener como máximo una aparición con compañero BL.
+- Independientemente, un jugador sin BL puede tener como máximo una aparición frente a un equipo con al menos un BL.
+- Los jugadores BL no tienen esos límites.
+
+El solucionador utiliza backtracking con orden aleatorio, prioriza jugadores con más apariciones pendientes y mantiene un conjunto de parejas ya usadas. Tiene límites de ejecución de 40 segundos y 90.000 nodos. Si no encuentra solución dentro de esos límites, devuelve error y `generatePhase1()` no sustituye el calendario anterior. Un agotamiento del límite no demuestra imposibilidad matemática.
+
+La versión actual todavía necesita pruebas reales. Validar al menos:
+- 3, 4 y 5 partidos por jugador.
+- Ningún jugador BL, un BL, varios BL y una cantidad alta de BL.
+- Reglas de género 1, 2 y 3 en combinaciones representativas.
+- Reparto exacto, compañeros no repetidos y ambos contadores BL independientes.
+
+## Estado de pruebas
+
+La implementación generalizada se ha añadido a la rama `feature/phase1-bl-aware-generator`. No se ha ejecutado en Apps Script ni contra la hoja real; no marcarla como validada hasta realizar las pruebas anteriores.
 
 ## Archivos relevantes
 
@@ -133,3 +147,13 @@ Caso observado por el usuario: 29 jugadores, 4 partidos por jugador y 4 jugadore
 4. No mostrar datos internos de género o BL en la Web App pública.
 5. Probar los escenarios con reglas activadas y desactivadas, reparto exacto, compañeros no repetidos y alta de jugador antes de considerar una modificación terminada.
 6. Distinguir siempre entre código actualizado en GitHub, código copiado al proyecto Apps Script y versión desplegada de la Web App: son pasos diferentes.
+
+
+## Pruebas automatizadas
+
+La rama `test/phase1-bl-aware-generator` contiene `014_Phase1BLGeneratorTests.gs`.
+
+- Ejecutar `runPhase1BLGeneratorTests()` para las pruebas normales: validación BL de compañero/rival y contadores independientes, exención BL, reglas de género 1/2/3 y generación con 3/4/5 partidos por jugador.
+- Ejecutar `runPhase1BLGeneratorStressTests()` por separado para el caso de 29 jugadores, 4 partidos y 4 BL.
+- Las pruebas son in-memory y no escriben en hojas ni Script Properties. Requieren que los archivos de producción `001_Utils.gs`, `012_TournamentRules.gs` y `013_Phase1BLGenerator.gs` estén en el mismo proyecto Apps Script.
+- El generador es aleatorio y está limitado a 40 segundos/90.000 nodos. Un fallo de generación es un resultado de búsqueda no resuelta dentro del límite, no una prueba de imposibilidad matemática.

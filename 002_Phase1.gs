@@ -60,6 +60,9 @@ function generatePhase1() {
   const blMap = getPhase1BLRule_() ? getPhase1BLMap_(players) : null;
   if (players.length < 4) throw new Error('Se necesitan al menos 4 players.');
   if (cfg.matchesPerPlayer < cfg.minimumMatches) throw new Error(`El mínimo de matches por player es ${cfg.minimumMatches}.`);
+  if (cfg.matchesPerPlayer < 3 || cfg.matchesPerPlayer > 5) {
+    throw new Error('La Fase 1 debe configurarse entre 3 y 5 partidos por jugador.');
+  }
   if ((players.length * cfg.matchesPerPlayer) % 4 !== 0) {
     throw new Error('Con este número de players y matches por player no se puede repartir exactamente en matches 2v2. Cambia uno de los dos valores.');
   }
@@ -73,9 +76,23 @@ function generatePhase1() {
   const counts = {};
   players.forEach(p => counts[p]=0);
 
-  if (cfg.matchesPerPlayer === 4 && players.length >= 6) {
-    // Construcción exacta para cuatro partidos por jugador, probando
-    // distintos órdenes hasta que todos los cruces cumplan las reglas activas.
+  if (blMap && cfg.matchesPerPlayer >= 3 && cfg.matchesPerPlayer <= 5) {
+    // Generador con restricciones integradas: cualquier cantidad de jugadores
+    // BL y entre 3 y 5 partidos por jugador.
+    const constraintAwareSchedule = generatePhase1ConstraintAware_(
+      players, cfg.matchesPerPlayer, genderMap, genderRules, blMap
+    );
+    if (!constraintAwareSchedule) {
+      throw new Error('No he encontrado un calendario que cumpla las reglas activas de género y BL, el reparto exacto de partidos y la prohibición de repetir compañeros. El calendario actual no se ha modificado.');
+    }
+    schedule.push(...constraintAwareSchedule);
+    schedule.forEach(match => {
+      match.flat().forEach(player => counts[player]++);
+      usedPairs.add(pairKey(match[0][0], match[0][1]));
+      usedPairs.add(pairKey(match[1][0], match[1][1]));
+    });
+  } else if (cfg.matchesPerPlayer === 4 && players.length >= 6) {
+    // Construcción cíclica existente para el resto de configuraciones.
     let validSchedule = false;
     for (let attempt = 0; attempt < 5000 && !validSchedule; attempt++) {
       const orderedPlayers = shuffle(players);
