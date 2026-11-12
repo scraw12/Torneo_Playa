@@ -5,7 +5,7 @@
  */
 function runAllModuleTests() {
   const suites = [
-    { name: '002_Phase1', run: test002002Phase1RequiresFixture },
+    { name: '002_Phase1 integration', run: test002Phase1Integration },
     { name: '005_Knockouts', run: test005005KnockoutsRequiresFixture },
     { name: '006_History', run: test006006HistoryRequiresFixture },
     { name: '007_Admin', run: test007007AdminRequiresFixture },
