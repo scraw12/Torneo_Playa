@@ -46,7 +46,7 @@ function withTemporaryTournamentSheets_(callback) {
 
 function createTemporaryTournamentSheets_(ss) {
   const definitions = {
-    CONFIG: [['Configuración','Valor'],['Nombre','TEST'],['Fecha',new Date()],['Partidos por player',3],['Courts',2],['Diferencia posiciones',3],['Mínimo de matches',3],['Jugadores ORO',0]],
+    CONFIG: [['Configuración','Valor'],['Nombre','TEST'],['Fecha',new Date()],['Partidos por player',4],['Courts',2],['Diferencia posiciones',3],['Mínimo de matches',3],['Jugadores ORO',0]],
     JUGADORES: [['Jugador','Activo','Genero','BL']],
     FASE1: [['Partido','Pista','Ronda','Jugador 1','Jugador 2','VS','Jugador 3','Jugador 4','Puntos team 1','Puntos team 2']],
     CLASIFICACION: [['Pos.','Jugador','PJ','V','D','PF','PC','Dif.','% Vict.','Desempate manual']]
@@ -60,7 +60,9 @@ function createTemporaryTournamentSheets_(ss) {
 
 function createPhase1IntegrationPlayers_() {
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEETS.PLAYERS);
-  const players = ['Test A','Test B','Test C','Test D','Test E','Test F','Test G','Test H'];
+  const players = Array.from({ length: 24 }, (_, index) =>
+    'Test ' + String(index + 1).padStart(2, '0')
+  );
   const rows = players.map(name => [name, true, 'Chico', '']);
   sheet.getRange(2, 1, rows.length, rows[0].length).setValues(rows);
   return players;
