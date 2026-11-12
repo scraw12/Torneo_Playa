@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html><head><base target="_top"><style>
+body{font:14px Arial,sans-serif;padding:18px;color:#17202a}
+label{display:block;font-weight:600;margin:14px 0 5px}
+input{width:100%;box-sizing:border-box;padding:9px;border:1px solid #cbd2da;border-radius:7px}
+button{margin-top:14px;padding:9px 13px;border:0;border-radius:7px;background:#1f6feb;color:#fff;cursor:pointer}
+button.danger{background:#b42318;margin:0}.muted{color:#667085;font-size:12px}
+.message{margin-top:12px;min-height:18px}.error{color:#b42318}
+li{display:flex;justify-content:space-between;align-items:center;margin:8px 0}
+</style></head><body>
+<h2>Usuarios de administración</h2>
+<p class="muted">Crea cuentas individuales para las personas que podrán gestionar el torneo. Las contraseñas se guardan como hashes con sal; no se pueden consultar después.</p>
+<form id="createForm">
+<label for="username">Usuario</label><input id="username" minlength="3" maxlength="32" pattern="[A-Za-z0-9._-]+" required autocomplete="off">
+<label for="password">Contraseña</label><input id="password" type="password" minlength="12" maxlength="128" required autocomplete="new-password">
+<button id="createButton" type="submit">Crear usuario</button></form>
+<div id="message" class="message" role="status"></div><h3>Cuentas activas</h3><ul id="users"><li class="muted">Cargando...</li></ul>
+<script>
+const message=document.getElementById('message');
+function show(text,error){message.textContent=text;message.className='message'+(error?' error':'');}
+function loadUsers(){google.script.run.withSuccessHandler(users=>{
+const list=document.getElementById('users');list.innerHTML='';
+if(!users.length){list.innerHTML='<li class="muted">No hay cuentas creadas.</li>';return;}
+users.forEach(username=>{const li=document.createElement('li');const name=document.createElement('span');name.textContent=username;
+const button=document.createElement('button');button.className='danger';button.type='button';button.textContent='Eliminar';button.onclick=()=>removeUser(username);
+li.appendChild(name);li.appendChild(button);list.appendChild(li);});
+}).withFailureHandler(e=>show(e.message||String(e),true)).listAdminUsersFromEditor();}
+document.getElementById('createForm').addEventListener('submit',event=>{event.preventDefault();const button=document.getElementById('createButton');button.disabled=true;
+const username=document.getElementById('username').value,password=document.getElementById('password').value;
+google.script.run.withSuccessHandler(result=>{document.getElementById('password').value='';show('Usuario '+result.username+' creado correctamente.',false);loadUsers();button.disabled=false;})
+.withFailureHandler(e=>{show(e.message||String(e),true);button.disabled=false;}).createAdminUserFromEditor(username,password);});
+function removeUser(username){if(!confirm('¿Eliminar la cuenta '+username+'? Sus sesiones dejarán de funcionar.'))return;
+google.script.run.withSuccessHandler(()=>{show('Cuenta eliminada.',false);loadUsers();}).withFailureHandler(e=>show(e.message||String(e),true)).removeAdminUserFromEditor(username);}
+loadUsers();
+</script></body></html>
