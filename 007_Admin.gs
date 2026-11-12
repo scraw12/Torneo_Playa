@@ -99,3 +99,15 @@ function adminSavePhase1GenderRules(settings) {
   requireAdmin();
   return savePhase1GenderRules_(settings);
 }
+
+/** Consulta la regla BL de Fase 1 solo para el administrador. */
+function adminGetPhase1BLRule() {
+  requireAdmin();
+  return getPhase1BLRule_();
+}
+
+/** Guarda la regla BL de Fase 1 solo para el administrador. */
+function adminSavePhase1BLRule(enabled) {
+  requireAdmin();
+  return savePhase1BLRule_(enabled);
+}
