@@ -60,6 +60,9 @@ function generatePhase1() {
   const blMap = getPhase1BLRule_() ? getPhase1BLMap_(players) : null;
   if (players.length < 4) throw new Error('Se necesitan al menos 4 players.');
   if (cfg.matchesPerPlayer < cfg.minimumMatches) throw new Error(`El mínimo de matches por player es ${cfg.minimumMatches}.`);
+  if (cfg.matchesPerPlayer < 3 || cfg.matchesPerPlayer > 5) {
+    throw new Error('La Fase 1 debe configurarse entre 3 y 5 partidos por jugador.');
+  }
   if ((players.length * cfg.matchesPerPlayer) % 4 !== 0) {
     throw new Error('Con este número de players y matches por player no se puede repartir exactamente en matches 2v2. Cambia uno de los dos valores.');
   }
