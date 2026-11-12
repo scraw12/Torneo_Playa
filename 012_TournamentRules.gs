@@ -230,9 +230,6 @@ function validatePhase1BLSchedule_(matches, blMap) {
         if (teammate && blMap.get(normalizePlayerKey_(teammate)) === true) {
           const count = (partnerMatches.get(key) || 0) + 1;
           partnerMatches.set(key, count);
-          if (count > 1) {
-            return;
-          }
         }
         if (opposingTeamHasBL) {
           const count = (opponentMatches.get(key) || 0) + 1;
