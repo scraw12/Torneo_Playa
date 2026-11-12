@@ -99,7 +99,8 @@
 
   <section id="fase1" class="view">
     <h2>Fase 1</h2>
-    <div class="muted">Puedes introducir o corregir el resultado de cada partido.</div>
+    <div class="muted">Puedes introducir o corregir resultados individualmente o guardar todos los marcadores introducidos de una sola vez.</div>
+    <div style="margin:10px 0"><button class="save" id="saveAllPhase1Button" onclick="saveAllScores('FASE1')">💾 Guardar todos los resultados de Fase 1</button></div>
     <div class="scroll" style="margin-top:10px"><table><thead><tr><th>#</th><th>Pista</th><th>Ronda</th><th>Equipo 1</th><th>Equipo 2</th><th>Resultado</th><th></th></tr></thead><tbody id="fase1Body"></tbody></table></div>
   </section>
 
@@ -129,6 +130,7 @@
   <section id="eliminatorias" class="view">
     <h2>Eliminatorias</h2>
     <div class="muted">Los resultados de las eliminatorias también pueden introducirse desde aquí.</div>
+    <div style="margin:10px 0"><button class="save" id="saveAllKnockoutButton" onclick="saveAllScores('KO')">💾 Guardar todos los resultados de eliminatorias</button></div>
     <div id="koContent" style="margin-top:12px"></div>
   </section>
 </main>
@@ -403,6 +405,60 @@
   function winnerFromScore(m){
     if(m.score1==='' || m.score2==='' || m.score1==null || m.score2==null) return '';
     const a=Number(m.score1), b=Number(m.score2); if(a===b) return ''; return a>b?m.pair1:m.pair2;
+  }
+
+  async function saveAllScores(type) {
+    const buttonId = type === 'FASE1' ? 'saveAllPhase1Button' : 'saveAllKnockoutButton';
+    const button = document.getElementById(buttonId);
+    const prefix = type === 'FASE1' ? 'FASE1_' : 'KO_';
+    const inputs = Array.from(document.querySelectorAll('input[id^="' + prefix + '"]'));
+    const resultsById = new Map();
+
+    inputs.forEach(input => {
+      const match = input.id.match(type === 'FASE1' ? /^FASE1_(.+)_([12])$/ : /^KO_(.+)_([12])$/);
+      if (!match) return;
+      const id = match[1];
+      if (!resultsById.has(id)) resultsById.set(id, {});
+      resultsById.get(id)['score' + match[2]] = input.value.trim();
+    });
+
+    const results = [];
+    for (const [id, scores] of resultsById.entries()) {
+      const score1Text = scores.score1 || '';
+      const score2Text = scores.score2 || '';
+      if (score1Text === '' && score2Text === '') continue;
+      if (score1Text === '' || score2Text === '') {
+        showMessage('Completa los dos marcadores del partido ' + id + '.', true);
+        return;
+      }
+      const score1 = Number(score1Text);
+      const score2 = Number(score2Text);
+      if (!Number.isInteger(score1) || !Number.isInteger(score2) || score1 < 0 || score2 < 0 || score1 === score2) {
+        showMessage('Revisa los marcadores del partido ' + id + '. Deben ser enteros, no negativos y sin empate.', true);
+        return;
+      }
+      results.push({ id: id, score1: score1, score2: score2 });
+    }
+
+    if (!results.length) {
+      showMessage('No hay resultados completos para guardar.', true);
+      return;
+    }
+    if (!confirm('Se guardarán ' + results.length + ' resultados de una sola vez. ¿Continuar?')) return;
+
+    if (button) button.disabled = true;
+    try {
+      const method = window.IS_ADMIN ? 'adminSaveScoreMultiple' : 'savePublicScoreMultiple';
+      const response = await callServer(method, type, results);
+      DATA = response.data || await callServer(window.IS_ADMIN ? 'adminGetKnockoutManagementData' : 'getPublicTournamentData');
+      render();
+      activate(type === 'FASE1' ? 'fase1' : 'eliminatorias');
+      showMessage('Se han guardado ' + results.length + ' resultados correctamente.');
+    } catch (e) {
+      showMessage(e.message || String(e), true);
+    } finally {
+      if (button) button.disabled = false;
+    }
   }
 
   async function saveScore(type,id) {
