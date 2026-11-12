@@ -453,7 +453,12 @@
       DATA = response.data || await callServer(window.IS_ADMIN ? 'adminGetKnockoutManagementData' : 'getPublicTournamentData');
       render();
       activate(type === 'FASE1' ? 'fase1' : 'eliminatorias');
-      showMessage('Se han guardado ' + results.length + ' resultados correctamente.');
+      const savedCount = Number(response.savedCount);
+      if (savedCount !== results.length) {
+        showMessage('Aviso: se enviaron ' + results.length + ' resultados, pero el servidor confirmó ' + (Number.isFinite(savedCount) ? savedCount : 'un número desconocido') + '.', true);
+      } else {
+        showMessage('Se han guardado los ' + savedCount + ' resultados correctamente.');
+      }
     } catch (e) {
       showMessage(e.message || String(e), true);
     } finally {
