@@ -122,7 +122,7 @@ function adminSaveManualTieBreaks(sessionToken, entries) {
     sheet.getRange(item.rowNumber, 10).setValue(value);
   });
 
-  updateStandings();
+  updateStandings_();
   return { ok: true, data: getPublicTournamentData() };
 }
 
