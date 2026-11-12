@@ -60,26 +60,30 @@ function getPhase1GenderMap_(players) {
 
 /**
  * Lee las reglas independientes de Fase 1.
- * Regla 1 se mantiene activada por defecto; Regla 2 empieza desactivada.
+ * Regla 1 se mantiene activada por defecto; Reglas 2 y 3 empiezan desactivadas.
  */
 function getPhase1GenderRules_() {
   const properties = PropertiesService.getScriptProperties();
   const rule1Value = properties.getProperty('PHASE1_GENDER_RULE_1');
   const rule2Value = properties.getProperty('PHASE1_GENDER_RULE_2');
+  const rule3Value = properties.getProperty('PHASE1_GENDER_RULE_3');
   return {
     rule1: rule1Value === null ? true : rule1Value === 'true',
-    rule2: rule2Value === null ? false : rule2Value === 'true'
+    rule2: rule2Value === null ? false : rule2Value === 'true',
+    rule3: rule3Value === null ? false : rule3Value === 'true'
   };
 }
 
-/** Guarda las dos reglas de forma independiente. */
+/** Guarda las tres reglas de forma independiente. */
 function savePhase1GenderRules_(settings) {
-  if (!settings || typeof settings.rule1 !== 'boolean' || typeof settings.rule2 !== 'boolean') {
+  if (!settings || typeof settings.rule1 !== 'boolean' ||
+      typeof settings.rule2 !== 'boolean' || typeof settings.rule3 !== 'boolean') {
     throw new Error('La configuración de reglas no es válida.');
   }
   PropertiesService.getScriptProperties().setProperties({
     PHASE1_GENDER_RULE_1: String(settings.rule1),
-    PHASE1_GENDER_RULE_2: String(settings.rule2)
+    PHASE1_GENDER_RULE_2: String(settings.rule2),
+    PHASE1_GENDER_RULE_3: String(settings.rule3)
   });
   return getPhase1GenderRules_();
 }
@@ -88,6 +92,7 @@ function savePhase1GenderRules_(settings) {
  * Comprueba un enfrentamiento 2 contra 2 aplicando solo las reglas activas.
  * Regla 1: una pareja de dos chicas solo se enfrenta a otra pareja de dos chicas.
  * Regla 2: si un equipo tiene alguna chica, el equipo rival también debe tenerla.
+ * Regla 3: cada chica debe participar al menos en un partido GG contra GG.
  */
 function isPhase1GenderMatchValid_(team1, team2, genderMap, rules) {
   const activeRules = rules || getPhase1GenderRules_();
@@ -118,6 +123,36 @@ function validatePhase1GenderSchedule_(matches, genderMap, rules) {
         matchNumber: i + 1,
         team1: match[0].slice(),
         team2: match[1].slice()
+      };
+    }
+  }
+  // Regla 3 es una condición del calendario completo y se comprueba abajo.
+  if (rules && rules.rule3) {
+    const girlsWithAllGirlMatch = new Set();
+    matches.forEach(match => {
+      const allGirlsMatch = match[0].every(name =>
+        genderMap.get(normalizePlayerKey_(name)) === 'chica'
+      ) && match[1].every(name =>
+        genderMap.get(normalizePlayerKey_(name)) === 'chica'
+      );
+      if (allGirlsMatch) {
+        match[0].concat(match[1]).forEach(name =>
+          girlsWithAllGirlMatch.add(normalizePlayerKey_(name))
+        );
+      }
+    });
+
+    const girlsWithoutAllGirlMatch = [];
+    genderMap.forEach((gender, key) => {
+      if (gender === 'chica' && !girlsWithAllGirlMatch.has(key)) {
+        girlsWithoutAllGirlMatch.push(key);
+      }
+    });
+    if (girlsWithoutAllGirlMatch.length) {
+      return {
+        valid: false,
+        reason: 'REGLA_3',
+        players: girlsWithoutAllGirlMatch
       };
     }
   }
