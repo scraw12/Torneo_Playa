@@ -8,7 +8,7 @@
 
 function doGet(e) {
   const isAdminRequest = e && e.parameter && String(e.parameter.admin || '') === '1';
-  const adminAllowed = isAdminRequest && isAdminUser();
+  const adminAllowed = false;
 
   const template = HtmlService.createTemplateFromFile('index');
   template.isAdmin = adminAllowed;
@@ -97,7 +97,7 @@ function savePublicResult(matchType, matchId, score1, score2) {
   const rowNumber = rowIndex + 2;
   if (normalizedType === 'FASE1') {
     sh.getRange(rowNumber, 9, 1, 2).setValues([[s1, s2]]);
-    updateStandings();
+    updateStandings_();
   } else {
     sh.getRange(rowNumber, 6, 1, 2).setValues([[s1, s2]]);
     const winner = s1 > s2 ? String(row[3]) : String(row[4]);
@@ -256,7 +256,7 @@ function saveScoreMultiple(matchType, results) {
     const scoreValues = rows.map(row => [row[8], row[9]]);
     updates.forEach(item => { scoreValues[item.rowIndex] = [item.score1, item.score2]; });
     sh.getRange(2, 9, scoreValues.length, 2).setValues(scoreValues);
-    updateStandings();
+    updateStandings_();
   } else {
     const resultValues = rows.map(row => [row[5], row[6], row[7]]);
     updates.forEach(item => { resultValues[item.rowIndex] = [item.score1, item.score2, item.winner]; });
