@@ -25,7 +25,7 @@ function readScore(v) {
   return Number.isFinite(n) ? n : null;
 }
 
-function readSheetData(sheetName, width) {
+function readSheetData_(sheetName, width) {
   const sh = SpreadsheetApp.getActive().getSheetByName(sheetName);
   if (!sh || sh.getLastRow() < 2) return { rows: [] };
   return { rows: sh.getRange(2, 1, sh.getLastRow() - 1, width).getValues() };
