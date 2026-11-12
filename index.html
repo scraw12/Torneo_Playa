@@ -396,12 +396,42 @@
       return `<div class="card" style="margin-bottom:14px"><h3>${group}</h3>` + rounds.map(round=>{
         const rr=rows.filter(r=>r.round===round);
         return `<div style="margin-top:12px"><strong>${esc(round)}</strong><div class="scroll"><table style="margin-top:6px"><thead><tr><th>Partido</th><th>Pareja 1</th><th>Pareja 2</th><th>Resultado</th><th>Ganador</th></tr></thead><tbody>`+
-          rr.map(m=>`<tr><td>${esc(m.id)}</td><td>${esc(m.pair1)}</td><td>${esc(m.pair2)}</td><td>${scoreEditor('KO',m.id,m.score1,m.score2)}</td><td>${esc(m.winner || winnerFromScore(m))}</td></tr>`).join('')+
+          rr.map(m=>`<tr><td>${esc(m.id)}</td><td>${pendingPlayerEditor(m.id,1,m.pair1)}</td><td>${pendingPlayerEditor(m.id,2,m.pair2)}</td><td>${scoreEditor('KO',m.id,m.score1,m.score2)}</td><td>${esc(m.winner || winnerFromScore(m))}</td></tr>`).join('')+
           `</tbody></table></div></div>`;
       }).join('')+'</div>';
     }).join('');
   }
 
+  function pendingPlayerEditor(matchId, side, pairValue) {
+    const pair = String(pairValue || '');
+    if (!pair.includes('PENDIENTE')) return esc(pair);
+    const inputId = 'KO_PENDING_' + matchId + '_' + side;
+    return `<div>${esc(pair)}</div>
+      <div style="display:flex;gap:5px;align-items:center;margin-top:7px;min-width:190px">
+        <input id="${esc(inputId)}" type="text" placeholder="Nombre del jugador"
+          aria-label="Jugador pendiente del partido ${esc(matchId)}"
+          style="min-width:0;width:100%;padding:7px;border:1px solid #cbd2da;border-radius:7px">
+        <button class="save" onclick="assignPendingPlayer('${esc(matchId)}',${side})">Asignar</button>
+      </div>`;
+  }
+
+  async function assignPendingPlayer(matchId, side) {
+    const input = document.getElementById('KO_PENDING_' + matchId + '_' + side);
+    const button = input && input.parentElement.querySelector('button');
+    const playerName = input ? input.value.trim() : '';
+    if (!playerName) { showMessage('Escribe el nombre del jugador.', true); return; }
+    if (button) button.disabled = true;
+    try {
+      const result = await callServer('savePendingPlayer', matchId, side, playerName);
+      DATA = result.data || await callServer(window.IS_ADMIN ? 'adminGetKnockoutManagementData' : 'getPublicTournamentData');
+      render();
+      activate('eliminatorias');
+      showMessage('Jugador asignado correctamente. Ya puedes guardar el resultado del partido.');
+    } catch (e) {
+      showMessage(e.message || String(e), true);
+      if (button) button.disabled = false;
+    }
+  }
   function winnerFromScore(m){
     if(m.score1==='' || m.score2==='' || m.score1==null || m.score2==null) return '';
     const a=Number(m.score1), b=Number(m.score2); if(a===b) return ''; return a>b?m.pair1:m.pair2;
