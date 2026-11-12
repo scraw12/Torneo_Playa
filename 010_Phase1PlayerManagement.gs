@@ -2,10 +2,13 @@
  * Adds one player to an already generated Phase 1 schedule with the minimum
  * possible number of changed matches. Blocked after any Phase 1 score is entered.
  */
-function adminAddPhase1Player(playerName) {
+function adminAddPhase1Player(playerData) {
   requireAdmin();
-  const name = String(playerName || '').trim();
+  const payload = playerData && typeof playerData === 'object' ? playerData : { name: playerData };
+  const name = String(payload.name || '').trim();
+  const newGender = normalizePlayerGender_(payload.gender);
   if (!name) throw new Error('Escribe el nombre del jugador.');
+  if (!newGender) throw new Error('Selecciona el género del jugador: Chico o Chica.');
 
   const ss = SpreadsheetApp.getActive();
   const playersSheet = ss.getSheetByName(SHEETS.PLAYERS);
@@ -48,6 +51,9 @@ function adminAddPhase1Player(playerName) {
 
   const config = getConfig();
   const matchesPerPlayer = config.matchesPerPlayer;
+  // Regla 1: el jugador incorporado también debe respetar los cruces por género.
+  const genderMap = getPhase1GenderMap_(activePlayers);
+  genderMap.set(normalizePlayerKey_(name), newGender);
   if (matchesPerPlayer % 4 !== 0) {
     throw new Error('La incorporación automática requiere que los partidos por jugador sean múltiplo de 4.');
   }
@@ -107,7 +113,7 @@ function adminAddPhase1Player(playerName) {
     );
   }
 
-  const plan = findPhase1InsertionPlan_(phaseRows, matchesPerPlayer, usedPairs);
+  const plan = findPhase1InsertionPlan_(phaseRows, matchesPerPlayer, usedPairs, genderMap, name);
   if (!plan) {
     throw new Error('No he encontrado una redistribución válida sin repetir compañeros. No se ha modificado ningún dato.');
   }
@@ -160,6 +166,9 @@ function adminAddPhase1Player(playerName) {
     const newPlayerRow = new Array(playerWidth).fill('');
     newPlayerRow[0] = name;
     newPlayerRow[1] = true;
+    const genderColumn = playersSheet.getRange(1, 1, 1, playerWidth).getValues()[0]
+      .findIndex(value => normalizeGenderHeader_(value) === 'genero');
+    if (genderColumn >= 0) newPlayerRow[genderColumn] = newGender === 'chico' ? 'Chico' : 'Chica';
     if (playerWidth >= 3 && String(playersSheet.getRange(1, 3).getValue()).trim().toLowerCase() === 'partidos') {
       newPlayerRow[2] = 0;
     }
@@ -222,7 +231,7 @@ function adminAddPhase1Player(playerName) {
  * four old matches are edited and one new match is added. Each displaced
  * player loses one old appearance and gains one appearance in the new match.
  */
-function findPhase1InsertionPlan_(phaseRows, matchesPerPlayer, usedPairs) {
+function findPhase1InsertionPlan_(phaseRows, matchesPerPlayer, usedPairs, genderMap, newPlayerName) {
   const candidatesByRow = phaseRows.map((row, rowIndex) => {
     const candidates = [];
     [[3, 4], [6, 7]].forEach(teamColumns => {
@@ -254,8 +263,13 @@ function findPhase1InsertionPlan_(phaseRows, matchesPerPlayer, usedPairs) {
       const remainingPairs = new Set(usedPairs);
       selected.forEach(item => remainingPairs.delete(item.oldPair));
       const displaced = selected.map(item => item.removedPlayer);
-      const newPairs = findUniquePhase1Pairs_(displaced, remainingPairs);
-      return newPairs ? { replacements: selected.slice(), newPairs: newPairs } : null;
+      const newPairs = findGenderValidNewPhase1Pairs_(displaced, remainingPairs, genderMap);
+      if (!newPairs) return null;
+      const proposedRows = phaseRows.map(row => row.slice());
+      selected.forEach(item => { proposedRows[item.rowIndex][item.columnIndex] = newPlayerName; });
+      const proposedMatches = proposedRows.map(row => [[String(row[3]), String(row[4])], [String(row[6]), String(row[7])]]);
+      if (!validatePhase1GenderSchedule_(proposedMatches, genderMap).valid) return null;
+      return { replacements: selected.slice(), newPairs: newPairs };
     }
 
     if (rowIndex >= candidatesByRow.length ||
@@ -280,6 +294,37 @@ function findPhase1InsertionPlan_(phaseRows, matchesPerPlayer, usedPairs) {
   }
 
   return search(0, [], new Set(), new Set());
+}
+
+/**
+ * REGLA 1 - FASE 1 (alta de jugador):
+ * Forma nuevos partidos con los jugadores desplazados, evitando repetir
+ * compañeros y comprobando que cada cruce respeta la regla de género.
+ */
+function findGenderValidNewPhase1Pairs_(players, usedPairs, genderMap) {
+  if (players.length === 0) return [];
+  if (players.length % 4 !== 0) return null;
+  const first = players[0];
+  for (const teammate1 of shuffle(players.slice(1))) {
+    const firstKey = pairKey(first, teammate1);
+    if (usedPairs.has(firstKey)) continue;
+    const rest = players.filter(player => player !== first && player !== teammate1);
+    const secondPlayer = rest[0];
+    for (const teammate2 of shuffle(rest.slice(1))) {
+      const secondKey = pairKey(secondPlayer, teammate2);
+      if (usedPairs.has(secondKey)) continue;
+      const team1 = [first, teammate1];
+      const team2 = [secondPlayer, teammate2];
+      if (!isPhase1GenderMatchValid_(team1, team2, genderMap)) continue;
+      const remaining = rest.filter(player => player !== secondPlayer && player !== teammate2);
+      const nextUsed = new Set(usedPairs);
+      nextUsed.add(firstKey);
+      nextUsed.add(secondKey);
+      const result = findGenderValidNewPhase1Pairs_(remaining, nextUsed, genderMap);
+      if (result) return [team1, team2, ...result];
+    }
+  }
+  return null;
 }
 
 function findUniquePhase1Pairs_(players, usedPairs) {
