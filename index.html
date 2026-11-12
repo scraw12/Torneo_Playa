@@ -35,7 +35,13 @@
     .tie-pending { color:#9a6700; font-weight:700; }
     .tie-resolved { color:#18794e; font-weight:700; }
     .save { border:0; border-radius:7px; padding:7px 10px; background:var(--accent); color:#fff; cursor:pointer; }
-    .save:disabled { opacity:.5; cursor:wait; }
+    .save:disabled { opacity:.75; cursor:wait; }
+    .save.is-loading { display:inline-flex; align-items:center; justify-content:center; gap:8px; }
+    .button-spinner { width:14px; height:14px; border:2px solid rgba(255,255,255,.4); border-top-color:#fff; border-radius:50%; display:inline-block; animation:button-spin .7s linear infinite; }
+    @keyframes button-spin { to { transform:rotate(360deg); } }
+    #backToTop { position:fixed; right:20px; bottom:20px; z-index:30; width:46px; height:46px; border:0; border-radius:50%; background:#1f6feb; color:#fff; font-size:23px; line-height:1; box-shadow:0 3px 12px rgba(0,0,0,.25); cursor:pointer; display:none; }
+    #backToTop:hover { background:#1558bd; }
+    #backToTop:focus-visible { outline:3px solid #9cc2ff; outline-offset:3px; }
     .msg { margin:10px 0; padding:10px 12px; border-radius:9px; background:#eef6ff; display:none; }
     .msg.error { background:#fff0f0; color:#9b1c1c; }
     .pair { padding:10px 0; border-bottom:1px solid var(--border); }
@@ -68,12 +74,12 @@
       <h3>Control del torneo</h3>
       <div class="muted" style="margin-bottom:12px">Estas acciones solo funcionan con tu cuenta de administrador.</div>
       <div style="display:flex;flex-wrap:wrap;gap:8px">
-        <button class="save" onclick="adminAction('adminGeneratePhase1','Fase 1 generada')">🎲 Generar Fase 1</button>
-        <button class="save" onclick="adminAction('adminUpdateStandings','Clasificación actualizada')">📊 Actualizar clasificación</button>
-        <button class="save" onclick="adminAction('adminGenerateGoldSilver','ORO / PLATA generados')">🏆 Generar ORO / PLATA</button>
-        <button class="save" onclick="adminAction('adminGenerateKnockout','Eliminatorias generadas')">⚔️ Generar eliminatorias</button>
-        <button class="save" onclick="adminAction('adminFinishTournament','Torneo finalizado y guardado en histórico')">💾 Finalizar torneo</button>
-        <button class="save" onclick="adminNewTournament()">🧹 Nuevo torneo</button>
+        <button class="save" onclick="adminAction('adminGeneratePhase1','Fase 1 generada',this)">🎲 Generar Fase 1</button>
+        <button class="save" onclick="adminAction('adminUpdateStandings','Clasificación actualizada',this)">📊 Actualizar clasificación</button>
+        <button class="save" onclick="adminAction('adminGenerateGoldSilver','ORO / PLATA generados',this)">🏆 Generar ORO / PLATA</button>
+        <button class="save" onclick="adminAction('adminGenerateKnockout','Eliminatorias generadas',this)">⚔️ Generar eliminatorias</button>
+        <button class="save" onclick="adminAction('adminFinishTournament','Torneo finalizado y guardado en histórico',this)">💾 Finalizar torneo</button>
+        <button class="save" onclick="adminNewTournament(this)">🧹 Nuevo torneo</button>
       </div>
     </div>
     <div class="card" style="margin-bottom:14px">
@@ -134,6 +140,7 @@
     <div id="koContent" style="margin-top:12px"></div>
   </section>
 </main>
+<button id="backToTop" type="button" aria-label="Volver arriba" title="Volver arriba" onclick="scrollToTop()">↑</button>
 
 <script>
   let DATA = null;
@@ -156,6 +163,29 @@
       google.script.run.withSuccessHandler(resolve).withFailureHandler(reject)[name](...args);
     });
   }
+  function setButtonLoading(button, loadingText) {
+    if (!button) return;
+    if (!button.dataset.originalHtml) button.dataset.originalHtml = button.innerHTML;
+    button.disabled = true;
+    button.classList.add('is-loading');
+    button.innerHTML = '<span class="button-spinner" aria-hidden="true"></span><span>' +
+      esc(loadingText || 'Procesando...') + '</span>';
+  }
+  function clearButtonLoading(button) {
+    if (!button) return;
+    if (button.dataset.originalHtml) button.innerHTML = button.dataset.originalHtml;
+    delete button.dataset.originalHtml;
+    button.classList.remove('is-loading');
+    button.disabled = false;
+  }
+  function scrollToTop() {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+  function updateBackToTopVisibility() {
+    const button = document.getElementById('backToTop');
+    if (button) button.style.display = window.scrollY > 300 ? 'block' : 'none';
+  }
+  window.addEventListener('scroll', updateBackToTopVisibility, { passive: true });
   function renderNav() {
     const nav=document.getElementById('nav');
     nav.innerHTML=tabs.map((t,i)=>`<button class="${i===0?'active':''}" data-view="${t[0]}">${t[1]}</button>`).join('');
@@ -208,7 +238,7 @@
     const name = input.value.trim();
     if (!name) { showMessage('Escribe el nombre del jugador.', true); return; }
     if (!confirm('Se redistribuirán algunos partidos de Fase 1. Esta operación solo está permitida antes de introducir resultados. ¿Continuar?')) return;
-    button.disabled = true;
+    setButtonLoading(button, 'Añadiendo jugador...');
     try {
       const result = await callServer('adminAddPhase1Player', name);
       DATA = result.data;
@@ -221,7 +251,7 @@
     } catch (e) {
       showMessage(e.message || String(e), true);
     } finally {
-      button.disabled = false;
+      clearButtonLoading(button);
     }
   }
 
@@ -359,7 +389,7 @@
     if (!inputs.length) { showMessage('No hay posiciones pendientes de edición. Comprueba que has actualizado la clasificación.', true); return; }
     const entries = inputs.map(input => ({ player: input.dataset.player, position: input.value.trim() }));
     const button = document.getElementById('saveTieBreaksButton');
-    if (button) button.disabled = true;
+    setButtonLoading(button, 'Guardando posiciones...');
     try {
       const result = await callServer('adminSaveManualTieBreaks', entries);
       DATA = result.data;
@@ -369,8 +399,7 @@
     } catch (e) {
       showMessage(e.message || String(e), true);
     } finally {
-      const currentButton = document.getElementById('saveTieBreaksButton');
-      if (currentButton) currentButton.disabled = false;
+      clearButtonLoading(button);
     }
   }
 
@@ -420,7 +449,7 @@
     const button = input && input.parentElement.querySelector('button');
     const playerName = input ? input.value.trim() : '';
     if (!playerName) { showMessage('Escribe el nombre del jugador.', true); return; }
-    if (button) button.disabled = true;
+    setButtonLoading(button, 'Asignando...');
     try {
       const result = await callServer('savePendingPlayer', matchId, side, playerName);
       DATA = result.data || await callServer(window.IS_ADMIN ? 'adminGetKnockoutManagementData' : 'getPublicTournamentData');
@@ -429,7 +458,7 @@
       showMessage('Jugador asignado correctamente. Ya puedes guardar el resultado del partido.');
     } catch (e) {
       showMessage(e.message || String(e), true);
-      if (button) button.disabled = false;
+      clearButtonLoading(button);
     }
   }
   function winnerFromScore(m){
@@ -476,7 +505,7 @@
     }
     if (!confirm('Se guardarán ' + results.length + ' resultados de una sola vez. ¿Continuar?')) return;
 
-    if (button) button.disabled = true;
+    setButtonLoading(button, 'Guardando resultados...');
     try {
       const method = window.IS_ADMIN ? 'adminSaveScoreMultiple' : 'savePublicScoreMultiple';
       const response = await callServer(method, type, results);
@@ -492,7 +521,7 @@
     } catch (e) {
       showMessage(e.message || String(e), true);
     } finally {
-      if (button) button.disabled = false;
+      clearButtonLoading(button);
     }
   }
 
@@ -501,15 +530,17 @@
     const btn=a.parentElement.querySelector('button');
     const s1=a.value, s2=b.value;
     if(s1==='' || s2===''){ showMessage('Introduce los dos marcadores.',true); return; }
-    btn.disabled=true;
+    setButtonLoading(btn, 'Guardando...');
     try {
       const result=await callServer(window.IS_ADMIN ? 'adminSaveResult' : 'savePublicResult',type,id,Number(s1),Number(s2));
       DATA=window.IS_ADMIN ? await callServer('adminGetKnockoutManagementData') : result.data; render(); showMessage('Resultado guardado.');
-    } catch(e) { showMessage(e.message || String(e),true); btn.disabled=false; }
+    } catch(e) { showMessage(e.message || String(e),true); }
+    finally { clearButtonLoading(btn); }
   }
 
-  async function adminAction(fn, successText) {
+  async function adminAction(fn, successText, button) {
     if(!window.IS_ADMIN){ showMessage('No tienes permisos de administrador.',true); return; }
+    setButtonLoading(button, 'Procesando...');
     try {
       const result=await callServer(fn);
       DATA=result;
@@ -517,12 +548,13 @@
       showMessage(successText);
       activate('admin');
     } catch(e) { showMessage(e.message || String(e),true); }
+    finally { clearButtonLoading(button); }
   }
 
-  async function adminNewTournament() {
+  async function adminNewTournament(button) {
     if(!window.IS_ADMIN){ showMessage('No tienes permisos de administrador.',true); return; }
     if(!confirm('¿Seguro que quieres limpiar el torneo actual? El histórico no se borrará.')) return;
-    await adminAction('adminNewTournament','Nuevo torneo preparado');
+    await adminAction('adminNewTournament','Nuevo torneo preparado',button);
   }
 
   async function load() {
