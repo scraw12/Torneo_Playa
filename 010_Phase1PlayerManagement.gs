@@ -52,10 +52,10 @@ function adminAddPhase1Player(playerData) {
   const matchesPerPlayer = config.matchesPerPlayer;
   // Solo se exige género cuando alguna regla está activa.
   const genderRules = getPhase1GenderRules_();
-  if ((genderRules.rule1 || genderRules.rule2) && !newGender) {
+  if ((genderRules.rule1 || genderRules.rule2 || genderRules.rule3) && !newGender) {
     throw new Error('Para incorporar al jugador con las reglas activas, indica Chico o Chica.');
   }
-  const genderMap = (genderRules.rule1 || genderRules.rule2)
+  const genderMap = (genderRules.rule1 || genderRules.rule2 || genderRules.rule3)
     ? getPhase1GenderMap_(activePlayers)
     : new Map();
   if (newGender) genderMap.set(normalizePlayerKey_(name), newGender);
