@@ -5,6 +5,12 @@
  */
 function runAllModuleTests() {
   const suites = [
+    { name: '002_Phase1', run: test002002Phase1RequiresFixture },
+    { name: '005_Knockouts', run: test005005KnockoutsRequiresFixture },
+    { name: '006_History', run: test006006HistoryRequiresFixture },
+    { name: '007_Admin', run: test007007AdminRequiresFixture },
+    { name: '008_WebApp', run: test008008WebAppRequiresFixture },
+    { name: '010_Phase1PlayerManagement', run: test010010Phase1playermanagementRequiresFixture },
     { name: '001 Utils', run: test001Utils },
     { name: '003 Standings', run: test003Standings },
     { name: '004 Final stage', run: test004FinalStage },
