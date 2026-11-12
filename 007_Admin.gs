@@ -329,7 +329,7 @@ function adminSavePhase1BLRule(sessionToken, enabled) {
 
 /**
  * Spreadsheet menu handlers. They are intentionally owner-only; the Web App
- * uses the session-protected adminGenerate*/adminUpdate* endpoints above.
+ * uses the session-protected admin-prefixed endpoints above.
  */
 function generatePhase1() {
   requireEditorOwner_();
