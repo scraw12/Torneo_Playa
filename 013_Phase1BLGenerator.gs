@@ -78,7 +78,9 @@ function generatePhase1FourBLPlayers_(players, genderMap, genderRules, blMap) {
     });
 
     const remaining = {};
-    players.forEach(player => { remaining[player] = 4; });
+    players.forEach(player => {
+      remaining[player] = blMap.get(normalizePlayerKey_(player)) === true ? 0 : 4;
+    });
     assignedRegulars.forEach(player => { remaining[player]--; });
 
     const residualMatches = [];
