@@ -17,7 +17,7 @@ El torneo se organiza alrededor de estos bloques funcionales:
 
 La administración utiliza la Web App para las operaciones protegidas. La interfaz pública permite consultar la información que la aplicación expone, sin mostrar datos internos de administración como las marcas BL o la información de género.
 
-Para el detalle de reglas, módulos y comportamiento funcional, consulta [Visión general de la aplicación](docs/APP_OVERVIEW.md).
+Para el detalle de reglas, módulos y comportamiento funcional, consulta [Visión general de la aplicación](docs/APP_OVERVIEW.md), el [esquema del libro](docs/DATABASE_SCHEMA.md) y la [revisión estática del código](docs/CODE_REVIEW.md).
 
 ## Flujo de ramas y desarrollo
 
